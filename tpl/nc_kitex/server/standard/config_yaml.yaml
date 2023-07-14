@@ -1,0 +1,44 @@
+path: internal/base/conf/config.yaml
+update_behavior:
+  type: skip
+body: |-
+  service:
+    space: ''
+    name: ''
+    version: v1.0.0
+  server:
+    rpc:
+      enable: true
+      address: ''
+      net_work: tcp
+    polaris:
+      enable: true
+    jaeger:
+      enable: true
+      endpoint: '36.139.116.223:4317'
+    transport:
+      enable: false
+    limit:
+      enable: false
+      max_connections: 10000
+      max_qps: 1000
+    stats_level:
+      level_disabled: false
+      level_base: false
+      level_detailed: true
+  logger:
+    enable: true
+    filename: ./log/***.log
+    max_size: 1
+    max_backups: 10
+    max_age: 30
+    compress: false
+    local_time: true
+    level: debug
+  db_option:
+    driver: mysql
+    source: yw:yw#123@tcp(192.168.0.10:3306)/ncloud_job?charset=utf8mb4&parseTime=True&loc=Local
+    sql_log: true
+    max_open_conns: 2
+    max_idle_conns: 1
+    conn_max_lifetime: 3600

@@ -1,0 +1,18 @@
+path: internal/base/conf/config.go
+update_behavior:
+  type: skip
+body: |-
+  package conf
+  
+  import (
+      "github.com/baoyxing/micro-extend/pkg/config"
+      "github.com/baoyxing/micro-extend/pkg/config/kitex_conf"
+      "github.com/baoyxing/micro-extend/pkg/config/log"
+  )
+  
+  type Config struct {
+    Service             kitex_conf.Service   `json:"service" mapstructure:"service" yaml:"service"`                                        
+    Server              kitex_conf.Server    `json:"server" mapstructure:"server" yaml:"server"` 
+    Logger              log.Logger           `json:"logger" mapstructure:"logger" yaml:"logger"`
+    DBOption            config.DBOption      `json:"db_option" mapstructure:"db_option" yaml:"db_option"`
+  }

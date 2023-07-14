@@ -1,0 +1,25 @@
+path: internal/base/data/data.go
+update_behavior:
+  type: skip
+body: |-
+  package data
+  
+  import (
+     "{{.Module}}/internal/base/conf"
+     "github.com/cloudwego/kitex/pkg/klog"
+  )
+  
+  type Data struct {
+    log  klog.CtxLogger
+    conf *conf.Config
+  }
+  
+  func NewData(c *conf.Config,log klog.CtxLogger)(*Data, func(), error) {
+      d := &Data{
+        log:log,
+        conf:c
+      }
+    return d, func() {}, nil
+  }
+  
+   
