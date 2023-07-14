@@ -1,4 +1,4 @@
-path: internal/schema
+path: internal/schema/
 update_behavior:
   type: skip
 body: |-
