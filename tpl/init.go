@@ -18,15 +18,14 @@ package tpl
 
 import (
 	"embed"
-	"fmt"
 	"os"
 	"path"
 )
 
-//go:embed kitex
+//go:embed nc_kitex
 var kitexTpl embed.FS
 
-//go:embed hertz
+//go:embed nc_hertz
 var hertzTpl embed.FS
 
 var (
@@ -40,12 +39,12 @@ func Init() {
 	os.RemoveAll(HertzDir)
 	os.Mkdir(KitexDir, 0o755)
 	os.Mkdir(HertzDir, 0o755)
-	fmt.Println("KitexDir:", KitexDir)
-	initDir(kitexTpl, "kitex", KitexDir)
-	initDir(hertzTpl, "hertz", HertzDir)
+	initDir(kitexTpl, "nc_kitex", KitexDir)
+	initDir(hertzTpl, "nc_hertz", HertzDir)
 }
 
 func initDir(fs embed.FS, srcDir, dstDir string) {
+
 	files, err := fs.ReadDir(srcDir)
 	if err != nil {
 		panic(err)
