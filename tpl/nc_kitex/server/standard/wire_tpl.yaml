@@ -1,0 +1,27 @@
+path: cmd/wire.go
+update_behavior:
+  type: skip
+body: |-
+  //go:build wireinject
+  // +build wireinject
+  
+  package main
+  
+  import (
+    "github.com/cloudwego/kitex/pkg/klog"
+    kserver "github.com/cloudwego/kitex/server"
+    "github.com/google/wire"
+    "{{.Module}}/internal/base/conf"
+    "{{.Module}}/internal/base/data"
+    "{{.Module}}/internal/base/server"
+    "{{.Module}}/internal/repo"
+    "{{.Module}}/internal/service"
+    "{{.Module}}/base/conf"
+  )
+  // The build tag makes sure the stub is not built in the final build.
+  
+  // *polaris.Registry, *registry.Info
+  func initApp(klog.CtxLogger, *conf.Config) (kserver.Server, func(), error) {
+      panic(wire.Build(service.ProviderSet, repo.ProviderSet, server.ProviderSet, data.ProviderSet))
+    }
+  

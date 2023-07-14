@@ -1,62 +1,66 @@
-path: main.go
+path: cmd/main.go
 update_behavior:
   type: skip
 body: |-
   package main
-
+  
   import (
-    "net"
-
+    "context"
+    "flag"
+    "github.com/baoyxing/micro-extend/pkg/configuration/polaris"
+    "github.com/baoyxing/micro-extend/pkg/utils/logutils"
     "github.com/cloudwego/kitex/pkg/klog"
-    "github.com/cloudwego/kitex/pkg/rpcinfo"
-    {{- if eq .Codec "thrift"}}
-    "github.com/cloudwego/kitex/pkg/transmeta"
-    {{- end }}
-    "github.com/cloudwego/kitex/server"
-    kitexlogrus "github.com/kitex-contrib/obs-opentelemetry/logging/logrus"
-    "{{.Module}}/conf"
-    "{{.ImportPath}}/{{ToLower .ServiceName}}"
-    "gopkg.in/natefinch/lumberjack.v2"
+    kitexZap "github.com/kitex-contrib/obs-opentelemetry/logging/zap"
+    "go.uber.org/zap/zapcore"
+    "gopkg.in/yaml.v3"
+    "{{.Module}}/internal/base/conf"
   )
-
+  
+  var (
+     namespace = "edge"                    //空间名称
+     fileGroup = "pcdn"                    //分组名称
+    fileName  = "rpc/jobPlan/config.yaml" //文件名称
+  )
+  
   func main() {
-    opts := kitexInit()
-
-    svr := {{ToLower .ServiceName}}.NewServer(new({{.ServiceName}}Impl), opts...)
-
-    err := svr.Run()
+    flag.Parse()
+    klog.SetLogger(kitexZap.NewLogger())
+    klog.SetLevel(klog.LevelDebug)
+  
+    configFile := polaris.ConfigApi(namespace, fileGroup, fileName)
+    //解析远程配置文件
+    config := new(conf.Config)
+    err := yaml.Unmarshal([]byte(configFile.GetContent()), &config)
+  
     if err != nil {
-      klog.Error(err.Error())
+      klog.CtxErrorf(context.Background(), "yaml 反序列化失败 error：%v", err)
+      panic(err)
     }
-  }
-
-  func kitexInit() (opts []server.Option) {
-    // address
-    addr, err := net.ResolveTCPAddr("tcp", conf.GetConf().Kitex.Address)
+  
+    // 自定义日志配置
+    if config.Logger.Enable {
+      opts := make([]logutils.Option, 0)
+      opts = append(opts, logutils.WithLumberjackFilename(config.Logger.Filename))
+      opts = append(opts, logutils.WithLumberjackMaxSize(config.Logger.MaxSize))
+      opts = append(opts, logutils.WithLumberjackMaxBackups(config.Logger.MaxBackups))
+      opts = append(opts, logutils.WithLumberjackMaxAge(config.Logger.MaxAge))
+      opts = append(opts, logutils.WithLumberjackCompress(config.Logger.Compress))
+      opts = append(opts, logutils.WithLumberjackLocalTime(config.Logger.LocalTime))
+      logger := logutils.NewLogger(opts...)
+      write := zapcore.AddSync(logger)
+      klog.SetOutput(write)
+      klog.SetLevel(logutils.Level(config.Logger.Level).KitexLogLevel())
+    }
+    //wire 依赖注入
+    svr, cleanup, err := initApp(klog.DefaultLogger(), config)
     if err != nil {
       panic(err)
     }
-    opts = append(opts, server.WithServiceAddr(addr))
-
-    // service info
-    	opts = append(opts, server.WithServerBasicInfo(&rpcinfo.EndpointBasicInfo{
-    		ServiceName: conf.GetConf().Kitex.Service,
-    	}))
-
-    {{- if eq .Codec "thrift"}}
-     // thrift meta handler
-     opts = append(opts, server.WithMetaHandler(transmeta.ServerTTHeaderHandler))
-    {{- end}}
-
-    // klog
-    logger := kitexlogrus.NewLogger()
-    klog.SetLogger(logger)
-    klog.SetLevel(conf.LogLevel())
-    klog.SetOutput(&lumberjack.Logger{
-          		Filename:   conf.GetConf().Kitex.LogFileName,
-          		MaxSize:    conf.GetConf().Kitex.LogMaxSize,
-          		MaxBackups: conf.GetConf().Kitex.LogMaxBackups,
-          		MaxAge:     conf.GetConf().Kitex.LogMaxAge,
-          	})
-    return
+  
+    defer cleanup()
+    if err := svr.Run(); err != nil {
+      panic(err)
+    }
   }
+
+  

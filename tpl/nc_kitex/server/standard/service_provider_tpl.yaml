@@ -1,0 +1,13 @@
+path: internal/service/provider.go
+update_behavior:
+  type: skip
+body: |-
+  package service
+  
+  import (
+      "github.com/google/wire"
+      )
+
+      var ProviderSet = wire.NewSet(
+        NewService,
+    )

@@ -1,0 +1,13 @@
+path: internal/base/server/provider.go
+update_behavior:
+  type: skip
+body: |-
+  package data
+  
+  import (
+      "github.com/google/wire"
+      )
+
+      var ProviderSet = wire.NewSet(
+        NewRPCServer,
+    )

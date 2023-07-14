@@ -1,25 +1,22 @@
-path: internal/base/data/data.go
+path: internal/service/service.go
 update_behavior:
   type: skip
 body: |-
-  package data
+  package Service
   
   import (
      "{{.Module}}/internal/base/conf"
      "github.com/cloudwego/kitex/pkg/klog"
   )
   
-  type Data struct {
+  type Service struct {
     log  klog.CtxLogger
     conf *conf.Config
   }
   
-  func NewData(c *conf.Config,log klog.CtxLogger)(*Data, func(), error) {
-      d := &Data{
+  func NewService(c *conf.Config,log klog.CtxLogger) {
+    return &Service{  
         log:log,
         conf:c,
-      }
-    return d, func() {}, nil
+    }
   }
-  
-   
