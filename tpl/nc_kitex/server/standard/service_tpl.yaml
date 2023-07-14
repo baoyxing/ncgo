@@ -2,7 +2,7 @@ path: internal/service/service.go
 update_behavior:
   type: skip
 body: |-
-  package Service
+  package service
   
   import (
      "{{.Module}}/internal/base/conf"
@@ -14,7 +14,7 @@ body: |-
     conf *conf.Config
   }
   
-  func NewService(c *conf.Config,log klog.CtxLogger) {
+  func NewService(c *conf.Config,log klog.CtxLogger) *Service {
     return &Service{  
         log:log,
         conf:c,

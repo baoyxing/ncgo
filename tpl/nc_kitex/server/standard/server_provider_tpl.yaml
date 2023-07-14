@@ -2,7 +2,7 @@ path: internal/base/server/provider.go
 update_behavior:
   type: skip
 body: |-
-  package data
+  package server
   
   import (
       "github.com/google/wire"
