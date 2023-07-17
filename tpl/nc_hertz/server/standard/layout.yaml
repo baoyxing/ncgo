@@ -547,7 +547,7 @@ layouts:
         "github.com/baoyxing/micro-extend/middleware"
         "github.com/baoyxing/micro-extend/pkg/options/http"
         "github.com/cloudwego/hertz/pkg/app/middlewares/server/recovery"
-        "github.com/cloudwego/hertz/pkg/app/server"
+        httpServer "github.com/cloudwego/hertz/pkg/app/server"
         "github.com/cloudwego/hertz/pkg/common/hlog"
         hgzip "github.com/hertz-contrib/gzip"
         hertztracing "github.com/hertz-contrib/obs-opentelemetry/tracing"
@@ -555,12 +555,12 @@ layouts:
         "{{.GoModule}}/internal/router"
       )
       
-      func NewHTTPServer(r *router.Router, c *conf.Config, log hlog.CtxLogger) *server.Hertz {
+      func NewHTTPServer(r *router.Router, c *conf.Config, log hlog.CtxLogger) *httpServer.Hertz {
   
         //初始化链路
         tracer, config := http.NewServerTracer(c.Server, c.Service, log)
         // 创建实例
-        hertz := server.New(http.ServerOptions(c.Server, c.Service, log, tracer)...)
+        hertz := httpServer.New(http.ServerOptions(c.Server, c.Service, log, tracer)...)
         hertz.Use(hertztracing.ServerMiddleware(config))
   
         //是否启用jaeger链路追踪
@@ -653,7 +653,7 @@ layouts:
       - "}}"
     body: |-
       
-      package server
+      package router
       
       import (
         "github.com/google/wire"
