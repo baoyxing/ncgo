@@ -89,7 +89,7 @@ layouts:
 
       defer cleanup()
       h.Spin()
-    }
+      }
 
   - path: go.mod
     delims:
