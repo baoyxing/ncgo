@@ -7,8 +7,7 @@ body: |-
    import (
      "github.com/baoyxing/micro-extend/pkg/options/rpc"
      "github.com/cloudwego/kitex/pkg/klog"
-     "{{.Module}}/internal/base/conf"
-    
+     "{{.Module}}/internal/base/conf"   
   )
   
   func NewRPCServer(c *conf.Config,log klog.CtxLogger){

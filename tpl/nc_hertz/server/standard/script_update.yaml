@@ -1,0 +1,7 @@
+path: script/publish.sh
+delims:
+  - "{{"
+  - "}}"
+body: |-
+  #!/usr/bin/env bash
+  hz update -idl ../idl/sdk.thrift

@@ -7,19 +7,68 @@ body: |-
   import (
      "{{.Module}}/internal/base/conf"
      "github.com/cloudwego/kitex/pkg/klog"
+     "github.com/redis/go-redis/v9"
+     "github.com/baoyxing/micro-extend/pkg/kafka/sarama"
   )
   
   type Data struct {
     log  klog.CtxLogger
     conf *conf.Config
+    *sarama.KafkaProducer
+    RedisClient *redis.Client
+    ESClient       *elastic.Client
   }
   
-  func NewData(c *conf.Config,log klog.CtxLogger)(*Data, func(), error) {
+  func NewData(c *conf.Config,log klog.CtxLogger)(*Data, func(), error) { 
+      ctx := context.Background()
       d := &Data{
         log:log,
         conf:c,
+        KafkaProducer: newKafkaProducer(ctx,c,log),
+        RedisClient: newRedisClient(ctx,c,log),
+        ESClient:       newESClient(ctx, c, log),
       }
-    return d, func() {}, nil
+    return d, func() {
+        err := d.KafkaProducer.SyncProducer.Close()
+        if err != nil {
+  	        log.CtxErrorf(ctx, "kafka close failed, err:%v", err)
+        }
+      }, nil
   }
+  
+  func newKafkaProducer(ctx context.Context,conf *conf.Config,log klog.CtxLogger) *sarama.KafkaProducer {
+      producer, err := sarama.NewKafkaProducer(conf.KafkaOption)
+      if err != nil {
+        log.CtxFatalf(ctx, "%v", err)
+      }
+      return producer
+  }
+  
+  func newRedisClient(ctx context.Context,conf *conf.Config, log klog.CtxLogger) *redis.Client {
+    client := redis.NewClient(&redis.Options{
+      Addr:     conf.RedisOption.Addr,
+      Password: conf.RedisOption.Password,
+      DB:       int(conf.RedisOption.DB),
+    })
+    _, err := client.Ping(ctx).Result()
+    if err != nil {
+        log.CtxFatalf(ctx, "redis connect ping failed, err:", err.Error())
+      }
+    return client
+  }
+  
+  func newESClient(ctx context.Context,conf *conf.Config,
+    log klog.CtxLogger) *elastic.Client {
+      client, err := elastic.NewClient(
+      elastic.SetURL(conf.ElasticClientOption.URL),
+      elastic.SetSniff(false))
+      if err != nil {
+        log.CtxFatalf(ctx, "elastic Dial failure,err:%v", err)
+      }
+      return client
+}
+
+
+
   
    

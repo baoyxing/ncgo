@@ -8,6 +8,8 @@ body: |-
       "github.com/baoyxing/micro-extend/pkg/config"
       "github.com/baoyxing/micro-extend/pkg/config/kitex_conf"
       "github.com/baoyxing/micro-extend/pkg/config/log"
+      "github.com/baoyxing/micro-extend/pkg/config/elastic/olivere"
+      "github.com/baoyxing/micro-extend/pkg/config/kafka/sarama"
   )
   
   type Config struct {
@@ -15,4 +17,23 @@ body: |-
     Server              kitex_conf.Server    `json:"server" mapstructure:"server" yaml:"server"` 
     Logger              log.Logger           `json:"logger" mapstructure:"logger" yaml:"logger"`
     DBOption            config.DBOption      `json:"db_option" mapstructure:"db_option" yaml:"db_option"`
+    ElasticClientOption olivere.ClientOption `json:"elastic_client_option" mapstructure:"elastic_client_option" yaml:"elastic_client_option"`
+    ElasticOption       ElasticOption        `json:"elastic_option" mapstructure:"elastic_option" yaml:"elastic_option"`
+    RedisOption config.RedisOption `json:"redis_option" mapstructure:"redis_option" yaml:"redis_option"`
+    RedisIndex  RedisIndex         `json:"redis_index" mapstructure:"redis_index" yaml:"redis_index"`
+    KafkaOption  sarama.KafkaOption `yaml:"kafka_option"`   // kafka配置
+  }
+  
+  type ElasticOption struct {
+  	MaxScrollSize int `json:"max_scroll_size" mapstructure:"max_scroll_size" yaml:"max_scroll_size"`
+  	KeepAlive     int `json:"keep_alive" mapstructure:"keep_alive" yaml:"keep_alive"`
+  }
+  
+  type RedisIndex struct {
+  	NodeIndex Index `json:"node_index" mapstructure:"node_index" yaml:"node_index"`
+  }
+
+  type Index struct {
+  	Name   string `json:"name" mapstructure:"name" yaml:"name"`
+  	Expire int64  `json:"expire" mapstructure:"expire" yaml:"expire"`
   }

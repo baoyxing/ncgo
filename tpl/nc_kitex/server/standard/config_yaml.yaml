@@ -42,3 +42,32 @@ body: |-
     max_open_conns: 2
     max_idle_conns: 1
     conn_max_lifetime: 3600
+  elastic_option:
+    max_scroll_size: 10000
+    keep_alive: 3
+  elastic_client_option:
+    url: http://*.*.*.*:9200
+  redis_option:
+    db: 6
+    addr: *.*.*.*:6379
+    password: ''
+  redis_index:
+    node_index:
+      name: "node:%s:%s"
+      expire: 60
+  kafka_option:
+    tls_option:
+        enable: false
+        cert_path:
+        key_path:
+    ca_option:
+        enable: false
+        ca_path: 
+    sasl_option:
+         enable: false
+         user:
+         password:
+    timeout: 5
+    broker:
+         - "kafka01:9092"
+

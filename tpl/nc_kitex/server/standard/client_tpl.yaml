@@ -1,0 +1,25 @@
+path: client/client.go
+update_behavior:
+  type: skip
+body: |-
+  package client
+  
+  import (
+      "context"
+      clientConf "github.com/baoyxing/micro-extend/pkg/config/client"
+      "github.com/baoyxing/micro-extend/pkg/options/rpc"
+      "github.com/cloudwego/hertz/pkg/common/hlog"
+      "github.com/kitex-contrib/polaris"
+    )
+  
+  func NewRPCClient(ctx context.Context,
+  	confClient clientConf.Client, polaris clientConf.Polaris, jaeger clientConf.Jaeger,
+  	clientName, serverName string, suite *polaris.ClientSuite,
+  	log hlog.CtxLogger) error {
+      opts, err := rpc.ClientOptions(confClient, polaris, jaeger, clientName, suite, log)
+      if err != nil {
+          log.CtxErrorf(ctx, "create node rpc client failure,err:%v", err)
+          return err
+      }
+    return nil
+  }
