@@ -684,7 +684,6 @@ layouts:
         go.opentelemetry.io/otel/trace v1.15.1
         go.uber.org/zap v1.24.0
         gopkg.in/yaml.v3 v3.0.1
-        nCloud/edge/plugin/rpc/edge-info v0.0.0
       )
     
   
