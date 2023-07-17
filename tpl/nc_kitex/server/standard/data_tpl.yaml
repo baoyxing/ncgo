@@ -5,9 +5,11 @@ body: |-
   package data
   
   import (
+     "context"
      "{{.Module}}/internal/base/conf"
      "github.com/cloudwego/kitex/pkg/klog"
      "github.com/redis/go-redis/v9"
+     "github.com/olivere/elastic/v7"
      "github.com/baoyxing/micro-extend/pkg/kafka/sarama"
   )
   

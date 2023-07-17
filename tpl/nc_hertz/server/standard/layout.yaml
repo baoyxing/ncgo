@@ -1,4 +1,32 @@
 layouts:
+  - path: cmd/wire.go
+    delims:
+      - ""
+      - ""
+    body: |-
+      //go:build wireinject
+      // +build wireinject
+  
+      // The build tag makes sure the stub is not built in the final build.
+  
+      package main
+      import (
+        "github.com/cloudwego/hertz/pkg/app/server"
+        "github.com/cloudwego/hertz/pkg/common/hlog"
+        "github.com/google/wire"
+        "{{.Module}}/internal/base/conf"
+        "{{.Module}}/internal/base/data"
+        httpServer "{{.Module}}/internal/base/server"
+        "{{.Module}}/internal/repo"
+        "{{.Module}}/internal/router"
+        "{{.Module}}/internal/service"
+      )
+      // *polaris.Registry, *registry.Info
+      func initApp(hlog.CtxLogger, *conf.Config) (*server.Hertz, func(), error) {
+        panic(wire.Build(router.ProviderSet, service.ProviderSet, repo.ProviderSet, httpServer.ProviderSet, data.ProviderSet))
+      }
+      
+
   - path: cmd/main.go
     delims:
       - ""
@@ -10,73 +38,58 @@ layouts:
 
       import (
         "context"
-
-        "github.com/cloudwego/hertz/pkg/app"
-      	"github.com/cloudwego/hertz/pkg/app/middlewares/server/recovery"
-      	"github.com/cloudwego/hertz/pkg/app/server"
-      	"github.com/cloudwego/hertz/pkg/common/hlog"
-        "github.com/cloudwego/hertz/pkg/common/utils"
-        "github.com/cloudwego/hertz/pkg/protocol/consts"
-        "github.com/hertz-contrib/cors"
-      	"github.com/hertz-contrib/gzip"
-        "github.com/hertz-contrib/logger/accesslog"
-      	hertzlogrus "github.com/hertz-contrib/logger/logrus"
-      	"github.com/hertz-contrib/pprof"
-      	"{{.GoModule}}/biz/router"
-      	"{{.GoModule}}/conf"
-      	"gopkg.in/natefinch/lumberjack.v2"
+      
+        "flag"
+        "github.com/baoyxing/micro-extend/pkg/configuration/polaris"
+        "github.com/baoyxing/micro-extend/pkg/utils/logutils"
+        "github.com/cloudwego/hertz/pkg/common/hlog"
+        hertzzap "github.com/hertz-contrib/logger/zap"
+        "go.uber.org/zap/zapcore"
+        "gopkg.in/yaml.v3"
+        "nCloud/edge/plugin/bff/sdk-api/internal/base/conf"
+        )
+      var (
+        namespace = "edge"                    //空间名称
+        fileGroup = "plugin"                  //分组名称
+        fileName  = "bff/sdk-api/config.yaml" //文件名称
       )
-
       func main() {
-        // init dal
-        // dal.Init()
-      	address := conf.GetConf().Hertz.Address
-      	h := server.New(server.WithHostPorts(address))
-
-        registerMiddleware(h)
-
-        // add a ping route to test
-        h.GET("/ping", func(c context.Context, ctx *app.RequestContext) {
-        	ctx.JSON(consts.StatusOK, utils.H{"ping": "pong"})
-        })
-
-      	router.GeneratedRegister(h)
-
-      	h.Spin()
-      }
-
-      func registerMiddleware(h *server.Hertz) {
-      	// log
-      	logger := hertzlogrus.NewLogger()
-      	hlog.SetLogger(logger)
-      	hlog.SetLevel(conf.LogLevel())
-      	hlog.SetOutput(&lumberjack.Logger{
-      		Filename:   conf.GetConf().Hertz.LogFileName,
-      		MaxSize:    conf.GetConf().Hertz.LogMaxSize,
-      		MaxBackups: conf.GetConf().Hertz.LogMaxBackups,
-      		MaxAge:     conf.GetConf().Hertz.LogMaxAge,
-      	})
-
-      	// pprof
-      	if conf.GetConf().Hertz.EnablePprof {
-      		pprof.Register(h)
-      	}
-      	// gzip
-      	if conf.GetConf().Hertz.EnableGzip {
-      		h.Use(gzip.Gzip(gzip.DefaultCompression))
-      	}
-
-        // access log
-        if conf.GetConf().Hertz.EnableAccessLog {
-          h.Use(accesslog.New())
+        flag.Parse()
+        hlog.SetLogger(hertzzap.NewLogger())
+        hlog.SetLevel(hlog.LevelTrace)
+        configFile := polaris.ConfigApi(namespace, fileGroup, fileName)
+        //解析远程配置文件
+        config := new(conf.Config)
+        err := yaml.Unmarshal([]byte(configFile.GetContent()), &config)
+        if err != nil {
+            hlog.CtxErrorf(context.Background(), "json 反序列化失败 error：%v", err)
+            panic(err)
         }
-
-        // recovery
-        h.Use(recovery.Recovery())
-
-         // cores
-         h.Use(cors.Default())
+  
+        // 自定义日志配置
+        if config.Logger.Enable {
+          opts := make([]logutils.Option, 0)
+          opts = append(opts, logutils.WithLumberjackFilename(config.Logger.Filename))
+          opts = append(opts, logutils.WithLumberjackMaxSize(config.Logger.MaxSize))
+          opts = append(opts, logutils.WithLumberjackMaxBackups(config.Logger.MaxBackups))
+          opts = append(opts, logutils.WithLumberjackMaxAge(config.Logger.MaxAge))
+          opts = append(opts, logutils.WithLumberjackCompress(config.Logger.Compress))
+          opts = append(opts, logutils.WithLumberjackLocalTime(config.Logger.LocalTime))
+          logger := logutils.NewLogger(opts...)
+          write := zapcore.AddSync(logger)
+          hlog.SetOutput(write)
+          hlog.SetLevel(logutils.Level(config.Logger.Level).HertzLogLevel())
       }
+  
+      //wire 依赖注入
+      h, cleanup, err := initApp(hlog.DefaultLogger(), config)
+      if err != nil {
+        panic(err)
+      }
+
+      defer cleanup()
+      h.Spin()
+    }
 
   - path: go.mod
     delims:
@@ -139,7 +152,7 @@ layouts:
           space: edge
           name: edge-plugin-bff-edge-api-service
           version: v1.0.0
-        client_connect:
+      client_connect:
           edge_info_service:  edge-plugin-rpc-edge-info-service
           connect_option:
             timeout_control:
@@ -168,7 +181,7 @@ layouts:
               enable: false
             cbsuite:
               enable: false
-        server:
+      server:
           http:
             enable: true
             address: '0.0.0.0:20004'
@@ -210,7 +223,7 @@ layouts:
             enable: false
           swag:
             enable: false
-        logger:
+      logger:
           enable: true
           filename: ./log/edge-api-service.log
           max_size: 1
@@ -316,7 +329,7 @@ layouts:
       *.local.yml
 
 
-  - path: script/.hz
+  - path: .hz
     delims:
       - "{{"
       - "}}"
@@ -381,6 +394,46 @@ layouts:
       BinaryName={{.ServiceName}}
       echo "$CURDIR/bin/${BinaryName}"
       exec $CURDIR/bin/${BinaryName}
+      
+
+  - path: internal/base/data/provider.go
+    delims:
+      - "{{"
+      - "}}"
+    body: |-
+      package data
+  
+      import (
+        "github.com/google/wire"
+      )
+  
+      var ProviderSet = wire.NewSet(
+          NewData,
+      )
+  - path: internal/entity/
+    delims:
+      - ""
+      - ""
+    body: |-
+
+  - path: internal/schema/
+    delims:
+      - ""
+      - ""
+    body: |-
+
+  - path: internal/repo/provider.go
+    delims:
+      - "{{"
+      - "}}"
+    body: |-
+      package repo
+  
+      import (
+        "github.com/google/wire"
+      )
+  
+      var ProviderSet = wire.NewSet()
 
   - path: script/publish.sh
     delims:
@@ -398,3 +451,233 @@ layouts:
     body: |-
       #!/usr/bin/env bash
       hz update -idl ../idl/***.thrift
+
+  - path: internal/base/data/data.go
+    delims:
+      - ""
+      - ""
+    body: |-
+      package data
+    
+      import (
+        "context"
+        mPolaris "github.com/baoyxing/micro-extend/pkg/polaris"
+        "github.com/cloudwego/hertz/pkg/common/hlog"
+        "github.com/kitex-contrib/polaris"
+        "{{.Module}}/internal/base/conf"
+      )
+      
+      type Data struct {
+        log  klog.CtxLogger
+        conf *conf.Config
+      }
+      
+      func NewData(log hlog.CtxLogger,
+        conf *conf.Config) *Data {
+        discover := newDiscover(conf, log)
+        return &Data{
+          log:        log,
+          conf:       conf,
+          }
+        }
+      
+      // NewDiscover 服务发现
+      func newDiscover(ctx context.Context,c *conf.Config, log hlog.CtxLogger) *polaris.ClientSuite {
+        return mPolaris.NewDiscover(ctx, c.Service.Space, log)
+      }
+
+  - path: internal/service/service.go
+    delims:
+      - "{{"
+      - "}}"
+    body: |-
+      package service
+  
+      import (
+        "{{.Module}}/internal/base/conf"
+       "github.com/cloudwego/hertz/pkg/common/hlog"
+      )
+
+      type Service struct {
+        log  hlog.CtxLogger
+        conf *conf.Config
+      }
+
+      func NewService(c *conf.Config,log hlog.CtxLogger) *Service {
+        return &Service{
+          log:log,
+          conf:c,
+        }
+      }
+
+  - path: internal/service/provider.go
+    delims:
+      - "{{"
+      - "}}"
+    body: |-
+      
+      package service
+  
+      import (
+        "github.com/google/wire"
+      )
+  
+      var ProviderSet = wire.NewSet(
+        NewService,
+      )
+
+  - path: internal/base/server/provider.go
+    delims:
+      - "{{"
+      - "}}"
+    body: |-
+      
+      package server
+      
+      import (
+        "github.com/google/wire"
+      )
+      
+      var ProviderSet = wire.NewSet(
+        NewHTTPServer,
+      )
+
+  - path: internal/base/server/http.go
+    delims:
+      - "{{"
+      - "}}"
+    body: |-
+      
+      package server
+      
+      import (
+        "context"
+        "github.com/baoyxing/micro-extend/middleware"
+        "github.com/baoyxing/micro-extend/pkg/options/http"
+        "github.com/cloudwego/hertz/pkg/app/middlewares/server/recovery"
+        "github.com/cloudwego/hertz/pkg/app/server"
+        "github.com/cloudwego/hertz/pkg/common/hlog"
+        hgzip "github.com/hertz-contrib/gzip"
+        hertztracing "github.com/hertz-contrib/obs-opentelemetry/tracing"
+        "{{.Module}}/internal/base/conf"
+        "{{.Module}}/internal/router"
+      )
+      
+      func NewHTTPServer(r *router.Router, c *conf.Config, log hlog.CtxLogger) *server.Hertz {
+  
+        //初始化链路
+        tracer, config := http.NewServerTracer(c.Server, c.Service, log)
+        // 创建实例
+      hertz := server.New(http.ServerOptions(c.Server, c.Service, log, tracer)...)
+      hertz.Use(hertztracing.ServerMiddleware(config))
+  
+      //是否启用jaeger链路追踪
+      if c.Server.Jaeger.Enable {
+        hertz.Use(hertztracing.ServerMiddleware(config))
+      }
+  
+      // 跨域
+      if c.Server.Cors.Enable {
+        hertz.Use(middleware.Cors())
+      }
+  
+      // panic恢复的功能
+      if c.Server.Recovery.Enable {
+        hertz.Use(recovery.Recovery())
+      }
+  
+      // gzip文件压缩
+      if c.Server.Gzip.Enable {
+        if c.Server.Gzip.BestCompression {
+          hertz.Use(hgzip.Gzip(hgzip.BestCompression, http.GzipOptions(c.Server)...))
+        }
+        if c.Server.Gzip.BestSpeed {
+          hertz.Use(hgzip.Gzip(hgzip.BestSpeed, http.GzipOptions(c.Server)...))
+        }
+        if c.Server.Gzip.DefaultCompression {
+          hertz.Use(hgzip.Gzip(hgzip.DefaultCompression, http.GzipOptions(c.Server)...))
+        }
+        if c.Server.Gzip.NoCompression {
+         hertz.Use(hgzip.Gzip(hgzip.NoCompression))
+        }     
+      }
+
+      // 国际化配置
+      //if c.Server.I18n.Enable {
+        //	hertz.Use(hertzI18n.Localize(options.I18nOptions()...))
+      //}
+  
+      //优雅退出
+      if c.Server.Http.Enable {
+        hertz.OnShutdown = append(hertz.OnShutdown, func(ctx context.Context) {
+          hlog.CtxInfof(ctx, "exit timeout!")
+        <-ctx.Done()
+        })
+      }
+
+      //初始化路由
+     r.InitRouter(hertz)
+     return hertz
+      }
+      
+  - path: internal/router/handler.go
+    delims:
+      - "{{"
+      - "}}"
+    body: |-
+      
+      package router
+  
+      import (
+        "github.com/cloudwego/hertz/pkg/app/server"
+        "github.com/hertz-contrib/logger/accesslog"
+      )
+  
+      func (r *Router) InitRouter(server *server.Hertz) {
+        server.Use(accesslog.New(accesslog.
+          WithFormat("[${time}] ${status} - ${latency} ${method} ${path} ${queryParams}")))
+      }
+
+  - path: internal/router/router.go
+    delims:
+      - "{{"
+      - "}}"
+    body: |-
+      package router
+      
+      import "{{.Module}}/internal/service"
+  
+      type Router struct {
+          *service.Service
+      }
+  
+      func NewRouter(service *service.Service) *Router {
+        return &Router{service}
+      }
+
+  - path: internal/router/provider.go
+    delims:
+      - "{{"
+      - "}}"
+    body: |-
+      
+      package server
+      
+      import (
+        "github.com/google/wire"
+      )
+      
+      var ProviderSet = wire.NewSet(
+        NewRouter,
+      )  
+    
+  
+      
+    
+
+  
+      
+      
+      
+      
+      
