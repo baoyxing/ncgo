@@ -1,4 +1,4 @@
-path: script/publish.sh
+path: script/update.sh
 delims:
   - "{{"
   - "}}"
