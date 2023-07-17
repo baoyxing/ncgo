@@ -25,7 +25,6 @@ layouts:
       func initApp(hlog.CtxLogger, *conf.Config) (*server.Hertz, func(), error) {
         panic(wire.Build(router.ProviderSet, service.ProviderSet, repo.ProviderSet, httpServer.ProviderSet, data.ProviderSet))
       }
-      
 
   - path: cmd/main.go
     delims:
@@ -46,8 +45,9 @@ layouts:
         hertzzap "github.com/hertz-contrib/logger/zap"
         "go.uber.org/zap/zapcore"
         "gopkg.in/yaml.v3"
-        {{.GoModule}}/internal/base/conf"
-        )
+        "{{.GoModule}}/internal/base/conf"
+      )
+      
       var (
         namespace = "edge"                    //空间名称
         fileGroup = "plugin"                  //分组名称
@@ -412,17 +412,19 @@ layouts:
       var ProviderSet = wire.NewSet(
           NewData,
       )
-  - path: internal/entity/
+  - path: internal/entity/test.go
     delims:
       - ""
       - ""
     body: |-
+      package entity
 
-  - path: internal/schema/
+  - path: internal/schema/test.go
     delims:
       - ""
       - ""
     body: |-
+      package schema
 
   - path: internal/repo/provider.go
     delims:
