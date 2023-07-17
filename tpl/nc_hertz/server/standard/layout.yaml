@@ -14,12 +14,12 @@ layouts:
         "github.com/cloudwego/hertz/pkg/app/server"
         "github.com/cloudwego/hertz/pkg/common/hlog"
         "github.com/google/wire"
-        "{{.Module}}/internal/base/conf"
-        "{{.Module}}/internal/base/data"
-        httpServer "{{.Module}}/internal/base/server"
-        "{{.Module}}/internal/repo"
-        "{{.Module}}/internal/router"
-        "{{.Module}}/internal/service"
+        "{{.GoModule}}/internal/base/conf"
+        "{{.GoModule}}/internal/base/data"
+        httpServer "{{.GoModule}}/internal/base/server"
+        "{{.GoModule}}/internal/repo"
+        "{{.GoModule}}/internal/router"
+        "{{.GoModule}}/internal/service"
       )
       // *polaris.Registry, *registry.Info
       func initApp(hlog.CtxLogger, *conf.Config) (*server.Hertz, func(), error) {
@@ -46,7 +46,7 @@ layouts:
         hertzzap "github.com/hertz-contrib/logger/zap"
         "go.uber.org/zap/zapcore"
         "gopkg.in/yaml.v3"
-        "nCloud/edge/plugin/bff/sdk-api/internal/base/conf"
+        {{.GoModule}}/internal/base/conf"
         )
       var (
         namespace = "edge"                    //空间名称
@@ -464,7 +464,7 @@ layouts:
         mPolaris "github.com/baoyxing/micro-extend/pkg/polaris"
         "github.com/cloudwego/hertz/pkg/common/hlog"
         "github.com/kitex-contrib/polaris"
-        "{{.Module}}/internal/base/conf"
+        "{{.GoModule}}/internal/base/conf"
       )
       
       type Data struct {
@@ -494,7 +494,7 @@ layouts:
       package service
   
       import (
-        "{{.Module}}/internal/base/conf"
+        "{{.GoModule}}/internal/base/conf"
        "github.com/cloudwego/hertz/pkg/common/hlog"
       )
 
@@ -559,8 +559,8 @@ layouts:
         "github.com/cloudwego/hertz/pkg/common/hlog"
         hgzip "github.com/hertz-contrib/gzip"
         hertztracing "github.com/hertz-contrib/obs-opentelemetry/tracing"
-        "{{.Module}}/internal/base/conf"
-        "{{.Module}}/internal/router"
+        "{{.GoModule}}/internal/base/conf"
+        "{{.GoModule}}/internal/router"
       )
       
       func NewHTTPServer(r *router.Router, c *conf.Config, log hlog.CtxLogger) *server.Hertz {
@@ -645,7 +645,7 @@ layouts:
     body: |-
       package router
       
-      import "{{.Module}}/internal/service"
+      import "{{.GoModule}}/internal/service"
   
       type Router struct {
           *service.Service
