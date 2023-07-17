@@ -568,56 +568,56 @@ layouts:
         //初始化链路
         tracer, config := http.NewServerTracer(c.Server, c.Service, log)
         // 创建实例
-      hertz := server.New(http.ServerOptions(c.Server, c.Service, log, tracer)...)
-      hertz.Use(hertztracing.ServerMiddleware(config))
-  
-      //是否启用jaeger链路追踪
-      if c.Server.Jaeger.Enable {
+        hertz := server.New(http.ServerOptions(c.Server, c.Service, log, tracer)...)
         hertz.Use(hertztracing.ServerMiddleware(config))
-      }
   
-      // 跨域
-      if c.Server.Cors.Enable {
-        hertz.Use(middleware.Cors())
-      }
+        //是否启用jaeger链路追踪
+        if c.Server.Jaeger.Enable {
+          hertz.Use(hertztracing.ServerMiddleware(config))
+        }
   
-      // panic恢复的功能
-      if c.Server.Recovery.Enable {
-        hertz.Use(recovery.Recovery())
-      }
+        // 跨域
+        if c.Server.Cors.Enable {
+          hertz.Use(middleware.Cors())
+        }
   
-      // gzip文件压缩
-      if c.Server.Gzip.Enable {
-        if c.Server.Gzip.BestCompression {
-          hertz.Use(hgzip.Gzip(hgzip.BestCompression, http.GzipOptions(c.Server)...))
+        // panic恢复的功能
+        if c.Server.Recovery.Enable {
+          hertz.Use(recovery.Recovery())
         }
-        if c.Server.Gzip.BestSpeed {
-          hertz.Use(hgzip.Gzip(hgzip.BestSpeed, http.GzipOptions(c.Server)...))
+  
+        // gzip文件压缩
+        if c.Server.Gzip.Enable {
+          if c.Server.Gzip.BestCompression {
+            hertz.Use(hgzip.Gzip(hgzip.BestCompression, http.GzipOptions(c.Server)...))
+          }
+          if c.Server.Gzip.BestSpeed {
+            hertz.Use(hgzip.Gzip(hgzip.BestSpeed, http.GzipOptions(c.Server)...))
+          }
+          if c.Server.Gzip.DefaultCompression {
+            hertz.Use(hgzip.Gzip(hgzip.DefaultCompression, http.GzipOptions(c.Server)...))
+          }
+          if c.Server.Gzip.NoCompression {
+            hertz.Use(hgzip.Gzip(hgzip.NoCompression))
+          }     
         }
-        if c.Server.Gzip.DefaultCompression {
-          hertz.Use(hgzip.Gzip(hgzip.DefaultCompression, http.GzipOptions(c.Server)...))
-        }
-        if c.Server.Gzip.NoCompression {
-         hertz.Use(hgzip.Gzip(hgzip.NoCompression))
-        }     
-      }
 
-      // 国际化配置
-      //if c.Server.I18n.Enable {
-        //	hertz.Use(hertzI18n.Localize(options.I18nOptions()...))
-      //}
+        // 国际化配置
+        //if c.Server.I18n.Enable {
+          //	hertz.Use(hertzI18n.Localize(options.I18nOptions()...))
+        //}
   
-      //优雅退出
-      if c.Server.Http.Enable {
-        hertz.OnShutdown = append(hertz.OnShutdown, func(ctx context.Context) {
-          hlog.CtxInfof(ctx, "exit timeout!")
-        <-ctx.Done()
-        })
-      }
+        //优雅退出
+        if c.Server.Http.Enable {
+          hertz.OnShutdown = append(hertz.OnShutdown, func(ctx context.Context) {
+            hlog.CtxInfof(ctx, "exit timeout!")
+            <-ctx.Done()
+            })
+        }
 
-      //初始化路由
-     r.InitRouter(hertz)
-     return hertz
+        //初始化路由
+        r.InitRouter(hertz)
+        return hertz
       }
       
   - path: internal/router/handler.go
