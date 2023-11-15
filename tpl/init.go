@@ -20,6 +20,8 @@ import (
 	"embed"
 	"os"
 	"path"
+
+	"github.com/baoyxing/ncgo/pkg/consts"
 )
 
 //go:embed nc_kitex
@@ -29,9 +31,8 @@ var kitexTpl embed.FS
 var hertzTpl embed.FS
 
 var (
-	KitexDir       = path.Join(os.TempDir(), "kitex")
-	HertzDir       = path.Join(os.TempDir(), "hertz")
-	KitexExtension = "extensions.yaml"
+	KitexDir = path.Join(os.TempDir(), consts.Kitex)
+	HertzDir = path.Join(os.TempDir(), consts.Hertz)
 )
 
 func Init() {
@@ -39,8 +40,8 @@ func Init() {
 	os.RemoveAll(HertzDir)
 	os.Mkdir(KitexDir, 0o755)
 	os.Mkdir(HertzDir, 0o755)
-	initDir(kitexTpl, "nc_kitex", KitexDir)
-	initDir(hertzTpl, "nc_hertz", HertzDir)
+	initDir(kitexTpl, consts.Kitex, KitexDir)
+	initDir(hertzTpl, consts.Hertz, HertzDir)
 }
 
 func initDir(fs embed.FS, srcDir, dstDir string) {

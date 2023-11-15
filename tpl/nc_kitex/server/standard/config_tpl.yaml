@@ -10,6 +10,20 @@ body: |-
       "github.com/baoyxing/micro-extend/pkg/config/log"
       "github.com/baoyxing/micro-extend/pkg/config/elastic/olivere"
       "github.com/baoyxing/micro-extend/pkg/config/kafka/sarama"
+      "gopkg.in/yaml.v3"
+      "io/ioutil"
+      "os"
+      "path/filepath"
+      "sync"
+      "github.com/bytedance/go-tagexpr/v2/validator"
+      "github.com/cloudwego/kitex/pkg/klog"
+      "github.com/kr/pretty"
+  
+  )
+  
+  var (
+  conf *Config
+  once sync.Once
   )
   
   type Config struct {
@@ -36,4 +50,38 @@ body: |-
   type Index struct {
   	Name   string `json:"name" mapstructure:"name" yaml:"name"`
   	Expire int64  `json:"expire" mapstructure:"expire" yaml:"expire"`
+  }
+  
+  // GetConf gets configuration instance
+  func GetConf() *Config {
+  	once.Do(initConf)
+  	return conf
+  }
+
+  func initConf() {
+  	prefix := "conf"
+  	confFileRelPath := filepath.Join(prefix, filepath.Join(GetEnv(), "conf.yaml"))
+  	content, err := ioutil.ReadFile(confFileRelPath)
+  	if err != nil {
+  		panic(err)
+  	}
+  	conf = new(Config)
+  	err = yaml.Unmarshal(content, conf)
+  	if err != nil {
+  		klog.Error("parse yaml error - %v", err)
+  		panic(err)
+  	}
+  	if err := validator.Validate(conf); err != nil {
+  		klog.Error("validate config error - %v", err)
+  		panic(err)
+  	}
+  	pretty.Printf("%+v\n", conf)
+  }
+
+  func GetEnv() string {
+  	e := os.Getenv("GO_ENV")
+  	if len(e) == 0 {
+  		return "test"
+  	}
+  	return e
   }

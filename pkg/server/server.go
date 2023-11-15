@@ -19,21 +19,20 @@ package server
 import (
 	"bytes"
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
-
 	"github.com/baoyxing/ncgo/config"
 	"github.com/baoyxing/ncgo/pkg/common/kx_registry"
 	"github.com/baoyxing/ncgo/pkg/common/utils"
+	"github.com/baoyxing/ncgo/pkg/consts"
 	"github.com/cloudwego/hertz/cmd/hz/app"
 	hzConfig "github.com/cloudwego/hertz/cmd/hz/config"
 	"github.com/cloudwego/hertz/cmd/hz/meta"
-	"github.com/cloudwego/hertz/cmd/hz/util"
 	kargs "github.com/cloudwego/kitex/tool/cmd/kitex/args"
 	"github.com/cloudwego/kitex/tool/internal_pkg/log"
 	"github.com/cloudwego/kitex/tool/internal_pkg/pluginmode/thriftgo"
 	"github.com/urfave/cli/v2"
+	"os"
+	"path/filepath"
+	"strings"
 )
 
 func Server(c *config.ServerArgument) error {
@@ -44,7 +43,7 @@ func Server(c *config.ServerArgument) error {
 	}
 
 	switch c.Type {
-	case config.RPC:
+	case consts.RPC:
 		var args kargs.Arguments
 		log.Verbose = c.Verbose
 		err = convertKitexArgs(c, &args)
@@ -61,13 +60,31 @@ func Server(c *config.ServerArgument) error {
 			if args.Use != "" {
 				out := strings.TrimSpace(out.String())
 				if strings.HasSuffix(out, thriftgo.TheUseOptionMessage) {
-					replaceThriftVersion(&args)
+					utils.ReplaceThriftVersion(args.IDLType)
 				}
 			}
 			os.Exit(1)
 		}
-		replaceThriftVersion(&args)
-	case config.HTTP:
+		if c.Hex { // add http listen for kitex
+			hzArgs, err := hzArgsForHex(c)
+			if err != nil {
+				return err
+			}
+			err = app.TriggerPlugin(hzArgs)
+			if err != nil {
+				return err
+			}
+			err = generateHexFile(c)
+			if err != nil {
+				return err
+			}
+			err = addHexOptions()
+			if err != nil {
+				log.Warn("please add \"opts = append(opts,server.WithTransHandlerFactory(&mixTransHandlerFactory{nil}))\", to your kitex options")
+			}
+		}
+		utils.ReplaceThriftVersion(args.IDLType)
+	case consts.HTTP:
 		args := hzConfig.NewArgument()
 		utils.SetHzVerboseLog(c.Verbose)
 		err = convertHzArgument(c, args)
@@ -80,7 +97,7 @@ func Server(c *config.ServerArgument) error {
 			if c.GoMod == "" {
 				return fmt.Errorf("output directory %s is not under GOPATH/src. Please specify a module name with the '-module' flag", c.Cwd)
 			}
-			module, path, ok := util.SearchGoMod(".", false)
+			module, path, ok := utils.SearchGoMod(consts.CurrentDir, false)
 			if ok {
 				// go.mod exists
 				if module != c.GoMod {
@@ -102,6 +119,9 @@ func Server(c *config.ServerArgument) error {
 				if err != nil {
 					err = cli.Exit(fmt.Errorf("persist manifest failed: %v", err), meta.PersistError)
 				}
+				if !args.NeedGoMod && args.IsNew() {
+					log.Warn(meta.AddThriftReplace)
+				}
 			}()
 		} else {
 			args.CmdType = meta.CmdUpdate
@@ -111,7 +131,7 @@ func Server(c *config.ServerArgument) error {
 				return cli.Exit(err, meta.LoadError)
 			}
 
-			module, path, ok := util.SearchGoMod(".", false)
+			module, path, ok := utils.SearchGoMod(consts.CurrentDir, false)
 			if ok {
 				// go.mod exists
 				if c.GoMod != "" && module != c.GoMod {
@@ -119,7 +139,7 @@ func Server(c *config.ServerArgument) error {
 				}
 				args.Gomod = module
 			} else {
-				workPath, err := filepath.Abs(".")
+				workPath, err := filepath.Abs(consts.CurrentDir)
 				if err != nil {
 					return fmt.Errorf(err.Error())
 				}

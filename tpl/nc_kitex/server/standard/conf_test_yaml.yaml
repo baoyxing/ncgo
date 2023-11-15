@@ -1,4 +1,4 @@
-path: internal/base/conf/config.yaml
+path: conf/test/conf.yaml
 update_behavior:
   type: skip
 body: |-
@@ -28,12 +28,14 @@ body: |-
       level_detailed: true
   logger:
     enable: true
-    filename: ./log/***.log
-    max_size: 1
+    path: ./log
+    max_size: 10
     max_backups: 10
     max_age: 30
     compress: false
-    local_time: true
+    output_mode: 2
+    suffix: ".log"
+    rotation_duration: 0
     level: debug
   db_option:
     driver: mysql

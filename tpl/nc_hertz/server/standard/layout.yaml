@@ -460,7 +460,7 @@ layouts:
       )
       
       type Data struct {
-        log  klog.CtxLogger
+        log  hlog.CtxLogger
         conf *conf.Config
       }
       

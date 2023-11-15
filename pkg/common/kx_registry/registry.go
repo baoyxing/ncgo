@@ -16,12 +16,12 @@ package kx_registry
 
 import (
 	"fmt"
-	"os"
-	"path"
-
 	"github.com/baoyxing/ncgo/config"
+	"github.com/baoyxing/ncgo/pkg/consts"
 	"github.com/baoyxing/ncgo/tpl"
 	"github.com/cloudwego/kitex/tool/internal_pkg/generator"
+	"os"
+	"path"
 )
 
 func HandleRegistry(ca *config.CommonParam, dir string) {
@@ -36,7 +36,7 @@ func HandleRegistry(ca *config.CommonParam, dir string) {
 	importPath := []string{ca.GoMod + "/conf", "github.com/cloudwego/kitex/pkg/klog"}
 
 	switch ca.Registry {
-	case config.Etcd:
+	case consts.Etcd:
 		te.Dependencies["github.com/kitex-contrib/registry-etcd"] = "etcd"
 		te.ExtendServer = &generator.APIExtension{
 			ImportPaths:  append(importPath, "github.com/kitex-contrib/registry-etcd", "github.com/cloudwego/kitex/pkg/rpcinfo"),
@@ -46,7 +46,7 @@ func HandleRegistry(ca *config.CommonParam, dir string) {
 			ImportPaths:  append(importPath, "github.com/kitex-contrib/registry-etcd"),
 			ExtendOption: etcdClient,
 		}
-	case config.Zk:
+	case consts.Zk:
 		te.Dependencies["github.com/kitex-contrib/registry-zookeeper/registry"] = "zkregistry"
 		te.Dependencies["github.com/kitex-contrib/registry-zookeeper/resolver"] = "zkresolver"
 		te.Dependencies["time"] = "time"
@@ -58,7 +58,7 @@ func HandleRegistry(ca *config.CommonParam, dir string) {
 			ImportPaths:  append(importPath, "github.com/kitex-contrib/registry-zookeeper/resolver", "time"),
 			ExtendOption: zkClient,
 		}
-	case config.Polaris:
+	case consts.Polaris:
 		te.Dependencies["github.com/kitex-contrib/registry-polaris"] = "polaris"
 		te.Dependencies["github.com/cloudwego/kitex/pkg/registry"] = "registry"
 		te.ExtendServer = &generator.APIExtension{
@@ -69,7 +69,7 @@ func HandleRegistry(ca *config.CommonParam, dir string) {
 			ImportPaths:  []string{"github.com/cloudwego/kitex/pkg/registry", "github.com/kitex-contrib/registry-polaris", "github.com/cloudwego/kitex/pkg/klog"},
 			ExtendOption: fmt.Sprintf(polarisClient, ca.Service),
 		}
-	case config.Nacos:
+	case consts.Nacos:
 		te.Dependencies["github.com/kitex-contrib/registry-nacos/registry"] = "registry"
 		te.Dependencies["github.com/kitex-contrib/registry-nacos/resolver"] = "resolver"
 		te.ExtendServer = &generator.APIExtension{
@@ -85,12 +85,12 @@ func HandleRegistry(ca *config.CommonParam, dir string) {
 		return
 	}
 
-	path := path.Join(dir, tpl.KitexExtension)
+	path := path.Join(dir, consts.KitexExtensionYaml)
 	te.ToYAMLFile(path)
 }
 
 func RemoveExtension() {
-	path := tpl.KitexDir + tpl.KitexExtension
+	path := tpl.KitexDir + consts.KitexExtensionYaml
 	os.RemoveAll(path)
 }
 

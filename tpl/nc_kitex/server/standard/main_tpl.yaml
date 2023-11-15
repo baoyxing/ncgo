@@ -11,9 +11,9 @@ body: |-
     "github.com/baoyxing/micro-extend/pkg/utils/logutils"
     "github.com/cloudwego/kitex/pkg/klog"
     kitexZap "github.com/kitex-contrib/obs-opentelemetry/logging/zap"
-    "go.uber.org/zap/zapcore"
     "gopkg.in/yaml.v3"
     "{{.Module}}/internal/base/conf"
+    "time"
   )
   
   var (
@@ -30,6 +30,7 @@ body: |-
     configFile := polaris.ConfigApi(namespace, fileGroup, fileName)
     //解析远程配置文件
     config := new(conf.Config)
+  //config = conf.GetConf()
     err := yaml.Unmarshal([]byte(configFile.GetContent()), &config)
   
     if err != nil {
@@ -39,17 +40,17 @@ body: |-
   
     // 自定义日志配置
     if config.Logger.Enable {
-      opts := make([]logutils.Option, 0)
-      opts = append(opts, logutils.WithLumberjackFilename(config.Logger.Filename))
-      opts = append(opts, logutils.WithLumberjackMaxSize(config.Logger.MaxSize))
-      opts = append(opts, logutils.WithLumberjackMaxBackups(config.Logger.MaxBackups))
-      opts = append(opts, logutils.WithLumberjackMaxAge(config.Logger.MaxAge))
-      opts = append(opts, logutils.WithLumberjackCompress(config.Logger.Compress))
-      opts = append(opts, logutils.WithLumberjackLocalTime(config.Logger.LocalTime))
-      logger := logutils.NewLogger(opts...)
-      write := zapcore.AddSync(logger)
-      klog.SetOutput(write)
-      klog.SetLevel(logutils.Level(config.Logger.Level).KitexLogLevel())
+      opts := make([]logutils.Option, 0, 8)
+      opts = append(opts, logutils.WithPath(config.Logger.Path))
+      opts = append(opts, logutils.WithMaxSize(config.Logger.MaxSize))
+      opts = append(opts, logutils.WithMaxBackups(config.Logger.MaxBackups))
+      opts = append(opts, logutils.WithMaxAge(config.Logger.MaxAge))
+      opts = append(opts, logutils.WithCompress(config.Logger.Compress))
+      opts = append(opts, logutils.WithOutputMode(config.Logger.OutputMode))
+      opts = append(opts, logutils.WithRotationDuration(time.Duration(config.Logger.RotationDuration)))
+      opts = append(opts, logutils.WithSuffix(config.Logger.Suffix))
+      logutils.NewKitexLog(opts...)
+      klog.SetLevel(logutils.Level(config.Logger.Level).KLogLevel())
     }
     //wire 依赖注入
     svr, cleanup, err := initApp(klog.DefaultLogger(), config)

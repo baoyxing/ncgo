@@ -17,24 +17,24 @@
 package dynamic
 
 import (
-	"strconv"
-
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/baoyxing/ncgo/config"
 	"github.com/baoyxing/ncgo/pkg/client"
 	"github.com/baoyxing/ncgo/pkg/common/utils"
+	"github.com/baoyxing/ncgo/pkg/consts"
 	"github.com/baoyxing/ncgo/pkg/model"
 	"github.com/baoyxing/ncgo/pkg/server"
 	"github.com/cloudwego/hertz/cmd/hz/meta"
 	"github.com/urfave/cli/v2"
+	"strconv"
 )
 
 var generateType = []*survey.Question{
 	{
-		Name: "type",
+		Name: consts.ServiceType,
 		Prompt: &survey.MultiSelect{
 			Message: "Select generate type",
-			Options: []string{Server, Client, DB},
+			Options: []string{consts.Server, consts.Client, consts.DB},
 		},
 		Validate: survey.Required,
 	},
@@ -54,7 +54,7 @@ func Terminal(*cli.Context) error {
 
 	cfg := &dfConfig{}
 	// ask whether generate server project
-	if _, ok := typeMap[Server]; ok {
+	if _, ok := typeMap[consts.Server]; ok {
 		sa := config.NewServerArgument()
 		err = survey.Ask(commonQuestion(), sa.CommonParam)
 		if err != nil {
@@ -88,7 +88,7 @@ func Terminal(*cli.Context) error {
 
 	num := &cNum{}
 	// ask whether generate client project
-	if _, ok := typeMap[Client]; ok {
+	if _, ok := typeMap[consts.Client]; ok {
 		err = survey.Ask(clientNum, num)
 		if err != nil {
 			return err
@@ -130,7 +130,7 @@ func Terminal(*cli.Context) error {
 	}
 
 	// ask whether generate db project
-	if _, ok := typeMap[DB]; ok {
+	if _, ok := typeMap[consts.DB]; ok {
 		da := config.NewModelArgument()
 		err = survey.Ask(dbConfig, da)
 		if err != nil {

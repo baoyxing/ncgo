@@ -7,9 +7,13 @@ body: |-
    import (
      "github.com/baoyxing/micro-extend/pkg/options/rpc"
      "github.com/cloudwego/kitex/pkg/klog"
-     "{{.Module}}/internal/base/conf"   
+     "{{.Module}}/internal/base/conf"
+     "{{.ImportPath}}/{{ToLower .ServiceName}}"
+     "{{.ImportPath}}"
+     "github.com/cloudwego/kitex/server"
   )
   
-  func NewRPCServer(c *conf.Config,log klog.CtxLogger){
-      rpc.ServerOptions(c.Server, c.Service, log)
+  func NewRPCServer(s .{{.ServiceName}},c *conf.Config,log klog.CtxLogger) server.Server {
+     	opts, _ := rpc.ServerOptions(c.Server, c.Service, log)
+        return {{ToLower .ServiceName}}.NewServer(s, opts...)
   }

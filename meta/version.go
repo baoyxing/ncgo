@@ -17,5 +17,6 @@
 package meta
 
 const (
+	Name    = "ncgo"
 	Version = "v0.0.1"
 )

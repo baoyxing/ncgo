@@ -1,0 +1,75 @@
+path: conf/dev/conf.yaml
+update_behavior:
+  type: skip
+body: |-
+  service:
+    space: ''
+    name: ''
+    version: v1.0.0
+  server:
+    rpc:
+      enable: true
+      address: ''
+      net_work: tcp
+    polaris:
+      enable: true
+    jaeger:
+      enable: true
+      endpoint: '36.139.116.223:4317'
+    transport:
+      enable: false
+    limit:
+      enable: false
+      max_connections: 10000
+      max_qps: 1000
+    stats_level:
+      level_disabled: false
+      level_base: false
+      level_detailed: true
+  logger:
+    enable: true
+    path: ./log
+    max_size: 10
+    max_backups: 10
+    max_age: 30
+    compress: false
+    output_mode: 2
+    suffix: ".log"
+    rotation_duration: 0
+    level: debug
+  db_option:
+    driver: mysql
+    source: yw:yw#123@tcp(192.168.0.10:3306)/ncloud_job?charset=utf8mb4&parseTime=True&loc=Local
+    sql_log: true
+    max_open_conns: 2
+    max_idle_conns: 1
+    conn_max_lifetime: 3600
+  elastic_option:
+    max_scroll_size: 10000
+    keep_alive: 3
+  elastic_client_option:
+    url: http://*.*.*.*:9200
+  redis_option:
+    db: 6
+    addr: *.*.*.*:6379
+    password: ''
+  redis_index:
+    node_index:
+      name: "node:%s:%s"
+      expire: 60
+  kafka_option:
+    tls_option:
+        enable: false
+        cert_path:
+        key_path:
+    ca_option:
+        enable: false
+        ca_path: 
+    sasl_option:
+         enable: false
+         user:
+         password:
+    timeout: 5
+    broker:
+         - "kafka01:9092"
+
