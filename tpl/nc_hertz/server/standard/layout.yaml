@@ -180,7 +180,7 @@ layouts:
       	}
       	return e
       }
-  - path: conf/dev/config.yaml
+  - path: cmd/conf/dev/config.yaml
     delims:
       - ""
       - ""
