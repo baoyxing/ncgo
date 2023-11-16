@@ -43,9 +43,9 @@ layouts:
         "github.com/baoyxing/micro-extend/pkg/utils/logutils"
         "github.com/cloudwego/hertz/pkg/common/hlog"
         hertzzap "github.com/hertz-contrib/logger/zap"
-        "go.uber.org/zap/zapcore"
         "gopkg.in/yaml.v3"
         "{{.GoModule}}/internal/base/conf"
+        "time"
       )
       
       var (
@@ -60,6 +60,7 @@ layouts:
         configFile := polaris.ConfigApi(namespace, fileGroup, fileName)
         //解析远程配置文件
         config := new(conf.Config)
+        //config = conf.GetConf()
         err := yaml.Unmarshal([]byte(configFile.GetContent()), &config)
         if err != nil {
             hlog.CtxErrorf(context.Background(), "json 反序列化失败 error：%v", err)
@@ -68,18 +69,18 @@ layouts:
   
         // 自定义日志配置
         if config.Logger.Enable {
-          opts := make([]logutils.Option, 0)
-          opts = append(opts, logutils.WithLumberjackFilename(config.Logger.Filename))
-          opts = append(opts, logutils.WithLumberjackMaxSize(config.Logger.MaxSize))
-          opts = append(opts, logutils.WithLumberjackMaxBackups(config.Logger.MaxBackups))
-          opts = append(opts, logutils.WithLumberjackMaxAge(config.Logger.MaxAge))
-          opts = append(opts, logutils.WithLumberjackCompress(config.Logger.Compress))
-          opts = append(opts, logutils.WithLumberjackLocalTime(config.Logger.LocalTime))
-          logger := logutils.NewLogger(opts...)
-          write := zapcore.AddSync(logger)
-          hlog.SetOutput(write)
-          hlog.SetLevel(logutils.Level(config.Logger.Level).HertzLogLevel())
-      }
+           opts := make([]logutils.Option, 0, 8)
+           opts = append(opts, logutils.WithPath(config.Logger.Path))
+           opts = append(opts, logutils.WithMaxSize(config.Logger.MaxSize))
+           opts = append(opts, logutils.WithMaxBackups(config.Logger.MaxBackups))
+           opts = append(opts, logutils.WithMaxAge(config.Logger.MaxAge))
+          opts = append(opts, logutils.WithCompress(config.Logger.Compress))
+          opts = append(opts, logutils.WithOutputMode(config.Logger.OutputMode))
+          opts = append(opts, logutils.WithRotationDuration(time.Duration(config.Logger.RotationDuration)))
+          opts = append(opts, logutils.WithSuffix(config.Logger.Suffix))
+          logutils.NewHertzLog(opts...)
+          hlog.SetLevel(logutils.Level(config.Logger.Level).HLogLevel())
+        }
   
       //wire 依赖注入
       h, cleanup, err := initApp(hlog.DefaultLogger(), config)
@@ -90,6 +91,7 @@ layouts:
       defer cleanup()
       h.Spin()
       }
+  
 
   - path: biz/router/register.go
     delims:
@@ -120,7 +122,20 @@ layouts:
       	"github.com/baoyxing/micro-extend/pkg/config/client"
       	"github.com/baoyxing/micro-extend/pkg/config/hertz_conf"
       	"github.com/baoyxing/micro-extend/pkg/config/log"
-      )
+        "github.com/bytedance/go-tagexpr/v2/validator"
+        "github.com/cloudwego/hertz/pkg/common/hlog"
+        "github.com/kr/pretty"
+        "gopkg.in/yaml.v3"
+        "io/ioutil"
+        "os"
+        "path/filepath"
+        "sync"
+        )
+      
+        var (
+        conf *Config
+        once sync.Once
+        )
 
       type Config struct {
       	Service       hertz_conf.Service `json:"service" mapstructure:"service" yaml:"service"`        //服务名称配置
@@ -128,12 +143,44 @@ layouts:
       	Server        hertz_conf.Server  `json:"server" mapstructure:"server" yaml:"server"`         //服务端配置
       	Logger        log.Logger         `json:"logger" mapstructure:"logger" yaml:"logger"`         //日志配置
       }
-
       type ClientConnect struct {
-      	Option          client.Client `json:"option" mapstructure:"option" yaml:"option"`
-      	EdgeInfoService string        `json:"edge_info_service" mapstructure:"edge_info_service" yaml:"edge_info_service"`
+        Option         client.Client          `json:"option" mapstructure:"option" yaml:"option"`
+        GeoInfoService client.RPCServerOption `json:"Geo_info_service" mapstructure:"Geo_info_service" yaml:"Geo_info_service"`
       }
-  - path: internal/base/conf/config.yaml
+      // GetConf gets configuration instance
+      func GetConf() *Config {
+      	once.Do(initConf)
+      	return conf
+      }
+
+      func initConf() {
+      	prefix := "conf"
+      	confFileRelPath := filepath.Join(prefix, filepath.Join(GetEnv(), "conf.yaml"))
+      	content, err := ioutil.ReadFile(confFileRelPath)
+      	if err != nil {
+      		hlog.panic(err)
+      	}
+      	conf = new(Config)
+      	err = yaml.Unmarshal(content, conf)
+      	if err != nil {
+      		hlog.Error("parse yaml error - %v", err)
+      		panic(err)
+      	}
+      	if err := validator.Validate(conf); err != nil {
+      		hlog.Error("validate config error - %v", err)
+      		panic(err)
+      	}
+      	pretty.Printf("%+v\n", conf)
+      }
+
+      func GetEnv() string {
+      	e := os.Getenv("GO_ENV")
+      	if len(e) == 0 {
+      		return "test"
+      	}
+      	return e
+      }
+  - path: conf/dev/config.yaml
     delims:
       - ""
       - ""
@@ -143,7 +190,9 @@ layouts:
           name: edge-plugin-bff-edge-api-service
           version: v1.0.0
       client_connect:
-          edge_info_service:  edge-plugin-rpc-edge-info-service
+          geo_info_service:
+            name: geo-info-service
+            Intranet: 192.168.2.30:4563
           connect_option:
             timeout_control:
               rpc_time_out:
@@ -215,12 +264,15 @@ layouts:
             enable: false
       logger:
           enable: true
-          filename: ./log/edge-api-service.log
-          max_size: 1
+          path: ./log
+          max_size: 10
           max_backups: 10
           max_age: 30
           compress: false
-          local_time: true
+          output_mode: 2
+          suffix: ".log"
+          rotation_duration: 0
+          level: debug
 
   - path: docker-compose.yaml
     delims:
@@ -317,20 +369,6 @@ layouts:
       /.vscode
       /output
       *.local.yml
-
-
-  - path: .hz
-    delims:
-      - "{{"
-      - "}}"
-    body: |-
-      // Code generated by hz. DO NOT EDIT.
-
-      hz version: {{.hzVersion}},
-      handlerDir: ""
-      modelDir: internal/schema
-      routerDir: ""
-
   - path: .gitignore
     delims:
       - ""
@@ -384,7 +422,83 @@ layouts:
       BinaryName={{.ServiceName}}
       echo "$CURDIR/bin/${BinaryName}"
       exec $CURDIR/bin/${BinaryName}
+  - path: internal/base/data/data.go
+    delims:
+      - "{{"
+      - "}}"
+    body: |-
+      package data
+      import (
+        "context"
+        geoRPCClient "github.com/baoyxing/geo-rpc/client"
+        "github.com/baoyxing/geo-rpc/kitex_gen/geo/geoservice"
+        "github.com/baoyxing/micro-extend/pkg/config/client"
+        mPolaris "github.com/baoyxing/micro-extend/pkg/polaris"
+        "github.com/cloudwego/hertz/pkg/common/hlog"
+        "github.com/kitex-contrib/polaris"
+        "{{.GoModule}}/internal/base/conf"
+        "time"
+      )
       
+      type Data struct {
+        Log       hlog.CtxLogger
+        Conf      *conf.Config
+        GeoClient geoservice.Client
+      }
+
+      func NewData(log hlog.CtxLogger,
+        conf *conf.Config) *Data {
+        ctx := context.Background()
+        discover := newDiscover(ctx, conf, log)
+        return &Data{
+        Log:       log,
+        Conf:      conf,
+        GeoClient: newGeoRpcClientWithPolaris(ctx, discover, conf, log),
+        }
+      }
+
+      // NewDiscover 服务发现
+      func newDiscover(ctx context.Context, c *conf.Config, log hlog.CtxLogger) *polaris.ClientSuite {
+          return mPolaris.NewDiscover(ctx, c.Service.Space, log)
+      }
+
+      func newGeoRpcClientWithPolaris(ctx context.Context,
+        suite *polaris.ClientSuite,
+         conf *conf.Config,
+        log hlog.CtxLogger) geoservice.Client {
+          rpcClient, _ := geoRPCClient.NewRPCClientWithPolaris(ctx,
+          conf.ClientConnect.Option,
+          conf.Server.Polaris,
+          conf.Server.Jaeger,
+          conf.Service.Name,
+          conf.ClientConnect.GeoInfoService.Name,
+           suite,
+        log)
+          return rpcClient
+       }
+
+      func newGeoRpcClient(ctx context.Context,
+           conf *conf.Config,
+           log hlog.CtxLogger) geoservice.Client {
+    
+        rpcTimeOut := time.Duration(3)
+        if len(conf.ClientConnect.Option.TimeoutControl.RpcTimeout.Timeout) > 1 && conf.ClientConnect.Option.TimeoutControl.RpcTimeout.Enable {
+        duration, err := time.ParseDuration(conf.ClientConnect.Option.TimeoutControl.RpcTimeout.Timeout)
+        if err == nil {
+        rpcTimeOut = duration
+        }
+       }
+      rpcClientConf := client.RpcClientConf{
+       Addr:             conf.ClientConnect.GeoInfoService.Intranet,
+       MuxConnectionNum: conf.ClientConnect.Option.ConnectionType.ClientTransport.MuxConnection,
+       RpcTimeout:       rpcTimeOut,
+        ProviderEndpoint: conf.Server.Jaeger.Endpoint,
+        ServiceName:      conf.ClientConnect.GeoInfoService.Name,
+      }
+        rpcClient, _ := geoRPCClient.NewRPCClient(ctx,
+        rpcClientConf, log)
+        return rpcClient
+        }
 
   - path: internal/base/data/provider.go
     delims:
@@ -400,6 +514,96 @@ layouts:
       var ProviderSet = wire.NewSet(
           NewData,
       )
+  - path: internal/repo/provider.go
+    delims:
+      - ""
+      - ""
+    body: |-
+      package repo
+      
+      import (
+      "github.com/google/wire"
+      )
+      
+      var ProviderSet = wire.NewSet(
+        NewGeoRepo,
+        )
+      
+
+  - path: internal/repo/geo_repo.go
+    delims:
+      - ""
+      - ""
+    body: |-
+      package repo
+      
+      import (
+      "context"
+      "{{.GoModule}}/internal/base/data"
+      "{{.GoModule}}/internal/schema"
+      "{{.GoModule}}/internal/service"
+      "github.com/bytedance/gopkg/cloud/metainfo"
+      )
+      
+      type geoRepo struct {
+          *data.Data
+      }
+
+      func NewGeoRepo(data *data.Data) service.GeoRepo {
+          return &geoRepo{data}
+      }
+
+      func (repo *geoRepo) Register(ctx context.Context, ip string) error {
+        ctx = metainfo.WithPersistentValue(ctx, "client_IP", ip)
+        location, err := repo.GeoClient.GetLocation(ctx)
+        if err != nil {
+          return err
+        }
+        metainfo.WithValue(ctx, "country", location.Country)
+        metainfo.WithValue(ctx, "region", location.Region)
+        metainfo.WithValue(ctx, "city", location.City)
+        metainfo.WithValue(ctx, "isp", location.Isp)
+        return nil
+      }
+      
+      func (repo *geoRepo) Get(ctx context.Context) schema.LocationObject {
+        location := schema.LocationObject{
+          Country: "unknown",
+          Region:  "unknown",
+          City:    "unknown",
+          Isp:     "unknown",
+        }
+        country, ok := metainfo.GetValue(ctx, "country")
+        if ok {
+          location.Country = country
+        }
+        region, ok := metainfo.GetValue(ctx, "region")
+        if ok {
+        location.Region = region
+        }
+        city, ok := metainfo.GetValue(ctx, "city")
+        if ok {
+          location.City = city
+        }
+        isp, ok := metainfo.GetValue(ctx, "isp")
+        if ok {
+          location.Isp = isp
+        } 
+          return location
+        }
+  - path: internal/repo/geo_repo.go
+    delims:
+      - ""
+      - ""
+    body: |-
+      package repo
+       import (
+      "github.com/google/wire"
+      )
+      
+      var ProviderSet = wire.NewSet(
+      NewGeoRepo,
+      )
   - path: internal/entity/test.go
     delims:
       - ""
@@ -407,25 +611,18 @@ layouts:
     body: |-
       package entity
 
-  - path: internal/schema/test.go
+  - path: internal/schema/location_schema.go
     delims:
       - ""
       - ""
     body: |-
       package schema
-
-  - path: internal/repo/provider.go
-    delims:
-      - "{{"
-      - "}}"
-    body: |-
-      package repo
-  
-      import (
-        "github.com/google/wire"
-      )
-  
-      var ProviderSet = wire.NewSet()
+      type LocationObject struct {
+          Country string `json:"country"` //国家
+          Region  string `json:"region"`  //中国的省份
+          City    string `json:"city"`    //城市
+          Isp     string `json:"isp"`     //运营商
+      }
 
   - path: script/publish.sh
     delims:
@@ -443,81 +640,6 @@ layouts:
     body: |-
       #!/usr/bin/env bash
       hz update -idl ../idl/***.thrift
-
-  - path: internal/base/data/data.go
-    delims:
-      - ""
-      - ""
-    body: |-
-      package data
-    
-      import (
-        "context"
-        mPolaris "github.com/baoyxing/micro-extend/pkg/polaris"
-        "github.com/cloudwego/hertz/pkg/common/hlog"
-        "github.com/kitex-contrib/polaris"
-        "{{.GoModule}}/internal/base/conf"
-      )
-      
-      type Data struct {
-        log  hlog.CtxLogger
-        conf *conf.Config
-      }
-      
-      func NewData(log hlog.CtxLogger,
-        conf *conf.Config) *Data {
-        discover := newDiscover(conf, log)
-        return &Data{
-          log:        log,
-          conf:       conf,
-          }
-        }
-      
-      // NewDiscover 服务发现
-      func newDiscover(ctx context.Context,c *conf.Config, log hlog.CtxLogger) *polaris.ClientSuite {
-        return mPolaris.NewDiscover(ctx, c.Service.Space, log)
-      }
-
-  - path: internal/service/service.go
-    delims:
-      - "{{"
-      - "}}"
-    body: |-
-      package service
-  
-      import (
-        "{{.GoModule}}/internal/base/conf"
-       "github.com/cloudwego/hertz/pkg/common/hlog"
-      )
-
-      type Service struct {
-        log  hlog.CtxLogger
-        conf *conf.Config
-      }
-
-      func NewService(c *conf.Config,log hlog.CtxLogger) *Service {
-        return &Service{
-          log:log,
-          conf:c,
-        }
-      }
-
-  - path: internal/service/provider.go
-    delims:
-      - "{{"
-      - "}}"
-    body: |-
-      
-      package service
-  
-      import (
-        "github.com/google/wire"
-      )
-  
-      var ProviderSet = wire.NewSet(
-        NewService,
-      )
-
   - path: internal/base/server/provider.go
     delims:
       - "{{"
@@ -623,11 +745,13 @@ layouts:
       import (
         "github.com/cloudwego/hertz/pkg/app/server"
         "github.com/hertz-contrib/logger/accesslog"
+        "{{.GoModule}}/internal/router/hello"
       )
   
       func (r *Router) InitRouter(server *server.Hertz) {
         server.Use(accesslog.New(accesslog.
           WithFormat("[${time}] ${status} - ${latency} ${method} ${path} ${queryParams}")))
+        hello.Register(server, r.HellService)
       }
 
   - path: internal/router/router.go
@@ -641,11 +765,31 @@ layouts:
   
       type Router struct {
           *service.Service
+          *service.HellService
       }
+      
+      func NewRouter(hellService *service.HellService, service *service.Service) *Router {
+          return &Router{service, hellService}
+      }
+  - path: internal/router/hello/router.go
+    delims:
+      - "{{"
+      - "}}"
+    body: |-
+      package hello
+      
+      import (
+        "crypto/sha1"
+        microMiddleware "github.com/baoyxing/micro-extend/middleware"
+        "{{.GoModule}}/internal/service"
+        "github.com/cloudwego/hertz/pkg/app/server"
+      )
   
-      func NewRouter(service *service.Service) *Router {
-        return &Router{service}
-      }
+      func Register(server *server.Hertz, api *service.HellService) {
+          helloGroup := server.Group("/hello")
+          helloGroup.Use(microMiddleware.Auth(api, sha1.New))
+          helloGroup.Use(microMiddleware.RegisterLocation(api))
+      {}}
 
   - path: internal/router/provider.go
     delims:
@@ -662,6 +806,92 @@ layouts:
       var ProviderSet = wire.NewSet(
         NewRouter,
       )
+  - path: internal/service/service.go
+    delims:
+      - '{{'
+      - '}}'
+    body: |-
+      
+      package service
+      
+       import (
+        "context"
+        "{{.GoModule}}/internal/base/conf"
+        "github.com/cloudwego/hertz/pkg/app"
+        "github.com/cloudwego/hertz/pkg/common/hlog"
+        )
+  
+        type Service struct {
+        log  hlog.CtxLogger
+        conf *conf.Config
+        GeoRepo
+        }
+        func NewService(geoRepo GeoRepo, c *conf.Config, log hlog.CtxLogger) *Service {
+        return &Service{
+        log:     log,
+        conf:    c,
+        GeoRepo: geoRepo,
+        }
+        }
+
+      func (s *Service) GetSk(c context.Context,
+        ctx *app.RequestContext,
+        ak string,
+        timestamp int64) (context.Context, string, error) {
+        return c, s.conf.Server.Auth.SK, nil
+      }
+
+      func (s *Service) RegisterClientIp(c context.Context,
+      ctx *app.RequestContext) (context.Context, error) {
+      err := s.GeoRepo.Register(c, ctx.ClientIP())
+      return c, err
+      }
+  - path: internal/service/provider.go
+    delims:
+      - '{{'
+      - '}}'
+    body: |-
+      package service
+  
+      import (
+        "github.com/google/wire"
+      )
+  
+       var ProviderSet = wire.NewSet(
+          NewService,
+          NewHellService,
+      )
+  - path: internal/service/geo_service.go
+    delims:
+      - '{{'
+      - '}}'
+    body: |-
+      package service  
+      
+      import (
+      "context"
+      "{{.GoModule}}/internal/schema"
+      )
+
+      type GeoRepo interface {
+      Register(ctx context.Context, ip string) error
+      Get(ctx context.Context) schema.LocationObject
+      }
+  - path: internal/service/hello_service.go
+    delims:
+      - '{{'
+      - '}}'
+    body: |-
+      package service 
+      type HellService struct {
+      *Service
+      }
+  
+      func NewHellService(s *Service) *HellService {
+        return &HellService{
+        s,
+        }
+        }
   - path: go.mod
     delims:
       - '{{'
@@ -669,20 +899,21 @@ layouts:
     body: |-
       module {{.GoModule}}
       
-      go 1.20
+      go 1.21.3
       
       require (
-        github.com/apache/thrift v0.13.0
-        github.com/baoyxing/micro-extend v0.0.0-20230523114929-7523f7a1dddb
-        github.com/cloudwego/hertz v0.6.3
+        github.com/apache/thrift v0.16.0
+        github.com/baoyxing/geo-rpc v0.0.0-20231115130557-d9ed4fbb1841
+        github.com/baoyxing/micro-extend v0.0.0-20231115095844-ea3234c6e9d7
+        github.com/bytedance/go-tagexpr/v2 v2.9.11
+        github.com/cloudwego/hertz v0.7.2
         github.com/google/wire v0.5.0
         github.com/hertz-contrib/gzip v0.0.1
         github.com/hertz-contrib/logger/accesslog v0.0.0-20230619034227-00fc458d8f95
-        github.com/hertz-contrib/logger/zap v1.0.0
-        github.com/hertz-contrib/obs-opentelemetry/tracing v0.2.1
+        github.com/hertz-contrib/logger/zap v1.1.0
+        github.com/hertz-contrib/obs-opentelemetry/tracing v0.3.1
         github.com/kitex-contrib/polaris v0.0.0-20220811095956-d405002eaeaf
-        go.opentelemetry.io/otel/trace v1.15.1
-        go.uber.org/zap v1.24.0
+        github.com/kr/pretty v0.3.1
         gopkg.in/yaml.v3 v3.0.1
       )
     

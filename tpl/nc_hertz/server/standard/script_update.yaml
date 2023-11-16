@@ -1,7 +1,0 @@
-path: script/update.sh
-delims:
-  - "{{"
-  - "}}"
-body: |-
-  #!/usr/bin/env bash
-  hz update -idl ../idl/sdk.thrift

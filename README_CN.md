@@ -26,10 +26,10 @@ ncgo 工具可以方便生成工程化模版，其主要功能特点如下：
 ## 安装 ncgo 工具
 ```
 # Go 1.15 及之前版本
-GO111MODULE=on GOPROXY=https://goproxy.cn/,direct go get github.com/cloudwego/cwgo@latest
+GO111MODULE=on GOPROXY=https://goproxy.cn/,direct go get github.com/baoyxing/ncgo@latest
 
 # Go 1.16 及以后版本
-GOPROXY=https://goproxy.cn/,direct go install github.com/cloudwego/cwgo@latest
+GOPROXY=https://goproxy.cn/,direct go installgithub.com/baoyxing/ncgo@latest
 ```
 
 ## 详细文档

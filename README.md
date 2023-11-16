@@ -37,10 +37,10 @@ the developer experience. The main features of ncgo tool are as follows:
 
 ```
 # Go 1.15 and earlier version
-GO111MODULE=on GOPROXY=https://goproxy.cn/,direct go get github.com/cloudwego/cwgo@latest
+GO111MODULE=on GOPROXY=https://goproxy.cn/,direct go get github.com/baoyxing/ncgo@latest
 
 # Go 1.16 and later version
-GOPROXY=https://goproxy.cn/,direct go install github.com/cloudwego/cwgo@latest
+GOPROXY=https://goproxy.cn/,direct go install github.com/baoyxing/ncgo@latest
 ```
 
 ## Detailed Documentation

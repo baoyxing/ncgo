@@ -1,0 +1,25 @@
+path: go.mod
+delims:
+  - "{{"
+  - "}}"
+body: |-
+  
+  module {{.GoModule}}
+  go 1.21.3
+  replace github.com/apache/thrift => github.com/apache/thrift v0.13.0
+
+  require (
+  	github.com/apache/thrift v0.16.0
+  	github.com/baoyxing/micro-extend v0.0.0-20231116031925-7f20c68b2938
+  	github.com/bytedance/go-tagexpr/v2 v2.9.11
+  	github.com/cloudwego/hertz v0.7.2
+  	github.com/cloudwego/kitex v0.7.3
+  	github.com/google/wire v0.5.0
+  	github.com/kitex-contrib/obs-opentelemetry v0.2.5
+  	github.com/kitex-contrib/obs-opentelemetry/logging/zap v0.0.0-20231103033707-6f0423a24fdf
+  	github.com/kitex-contrib/polaris v0.0.0-20220811095956-d405002eaeaf
+  	github.com/kr/pretty v0.3.1
+  	github.com/olivere/elastic/v7 v7.0.32
+  	github.com/redis/go-redis/v9 v9.3.0
+  	gopkg.in/yaml.v3 v3.0.1
+  )

@@ -33,7 +33,7 @@ body: |-
   *.sublime-workspace
   !.gitkeep
   .DS_Store
-  /.idea
-  /.vscode
+  .idea
+  .vscode
   /output
   *.local.yml

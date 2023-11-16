@@ -14,8 +14,8 @@ body: |-
   )
   
   type Data struct {
-    log  klog.CtxLogger
-    conf *conf.Config
+    Log  klog.CtxLogger
+    Conf *conf.Config
     *sarama.KafkaProducer
     RedisClient *redis.Client
     ESClient       *elastic.Client
@@ -24,8 +24,8 @@ body: |-
   func NewData(c *conf.Config,log klog.CtxLogger)(*Data, func(), error) { 
       ctx := context.Background()
       d := &Data{
-        log:log,
-        conf:c,
+        Log:log,
+        Conf:c,
         KafkaProducer: newKafkaProducer(ctx,c,log),
         RedisClient: newRedisClient(ctx,c,log),
         ESClient:       newESClient(ctx, c, log),
