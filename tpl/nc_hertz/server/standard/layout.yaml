@@ -543,14 +543,19 @@ layouts:
       "{{.GoModule}}/internal/schema"
       "{{.GoModule}}/internal/service"
       "github.com/bytedance/gopkg/cloud/metainfo"
+      "github.com/baoyxing/go-tools/cache/v1"
+      v1Cache "github.com/baoyxing/go-tools/pkg/cache/v1"
       )
       
       type geoRepo struct {
           *data.Data
+         cache v1.Cache[string, string]
+          
       }
 
       func NewGeoRepo(data *data.Data) service.GeoRepo {
-          return &geoRepo{data}
+         cache := v1Cache.NewLruCache[string, string](1000)
+         return &geoRepo{data, cache}
       }
 
       func (repo *geoRepo) Register(ctx context.Context, ip string) error {
@@ -913,6 +918,7 @@ layouts:
         github.com/hertz-contrib/logger/zap v1.1.0
         github.com/hertz-contrib/obs-opentelemetry/tracing v0.3.1
         github.com/kitex-contrib/polaris v0.0.0-20220811095956-d405002eaeaf
+        github.com/baoyxing/go-tools v0.0.0-20231116085324-3fe99025cdf7
         github.com/kr/pretty v0.3.1
         gopkg.in/yaml.v3 v3.0.1
       )
