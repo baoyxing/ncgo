@@ -20,6 +20,8 @@ body: |-
   	github.com/kitex-contrib/polaris v0.0.0-20220811095956-d405002eaeaf
   	github.com/kr/pretty v0.3.1
   	github.com/olivere/elastic/v7 v7.0.32
+  	github.com/redis/go-redis/extra/redisotel/v9 v9.0.5
+    github.com/uptrace/opentelemetry-go-extra/otelsql v0.2.3
   	github.com/redis/go-redis/v9 v9.3.0
   	gopkg.in/yaml.v3 v3.0.1
   )

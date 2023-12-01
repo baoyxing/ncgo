@@ -26,18 +26,19 @@ body: |-
     flag.Parse()
     klog.SetLogger(kitexZap.NewLogger())
     klog.SetLevel(klog.LevelDebug)
-  
-    configFile := polaris.ConfigApi(namespace, fileGroup, fileName)
-    //解析远程配置文件
     config := new(conf.Config)
-  //config = conf.GetConf()
-    err := yaml.Unmarshal([]byte(configFile.GetContent()), &config)
-  
-    if err != nil {
-      klog.CtxErrorf(context.Background(), "yaml 反序列化失败 error：%v", err)
-      panic(err)
-    }
-  
+  if conf.GetEnv() == "dev" {
+  //解析本地配置
+  config = conf.GetConf()
+  } else {
+  //解析远程配置文件
+  configFile := polaris.ConfigApi(namespace, fileGroup, fileName)
+  err := yaml.Unmarshal([]byte(configFile.GetContent()), &config)
+  if err != nil {
+  	ctx := context.Background()
+  	klog.CtxFatalf(ctx, "配置文件 yaml反序列化失败 error：%v", err)
+  }
+  }
     // 自定义日志配置
     if config.Logger.Enable {
       opts := make([]logutils.Option, 0, 8)

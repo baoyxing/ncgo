@@ -61,7 +61,7 @@ body: |-
   func initConf() {
   	prefix := "conf"
   	confFileRelPath := filepath.Join(prefix, filepath.Join(GetEnv(), "conf.yaml"))
-  	content, err := ioutil.ReadFile(confFileRelPath)
+  	content, err := os.ReadFile(confFileRelPath)
   	if err != nil {
   		panic(err)
   	}
@@ -75,13 +75,12 @@ body: |-
   		klog.Error("validate config error - %v", err)
   		panic(err)
   	}
-  	pretty.Printf("%+v\n", conf)
   }
 
   func GetEnv() string {
   	e := os.Getenv("GO_ENV")
   	if len(e) == 0 {
-  		return "test"
+  		return "dev"
   	}
   	return e
   }

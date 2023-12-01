@@ -15,6 +15,8 @@ body: |-
       "github.com/kitex-contrib/obs-opentelemetry/tracing"
       "github.com/cloudwego/kitex/client"
   "github.com/cloudwego/kitex/pkg/rpcinfo"
+    "github.com/cloudwego/kitex/pkg/remote/codec/thrift"
+  kClient "github.com/cloudwego/kitex/client"
       "time"
     )
   
@@ -38,23 +40,18 @@ body: |-
   
   func NewRPCClient(ctx context.Context,
   	conf clientConf.RpcClientConf, log hlog.CtxLogger) ({{ToLower .ServiceName}}.Client, error) {
-  	p := provider.NewOpenTelemetryProvider(
-  		provider.WithServiceName(conf.ServiceName),
-  		provider.WithExportEndpoint(conf.ProviderEndpoint),
-  		provider.WithInsecure(),
-  	)
-  	defer func(p provider.OtelProvider, ctx context.Context) {
-  		err := p.Shutdown(ctx)
-  		if err != nil {
-  			log.CtxFatalf(ctx, "provider Shutdown failure:%s", err.Error())
-  		}
-  	}(p, ctx)
-  	opts := make([]client.Option, 0)
-  	opts = append(opts, client.WithHostPorts(conf.Addr))
-  	opts = append(opts, client.WithMuxConnection(conf.MuxConnectionNum))
-  	opts = append(opts, client.WithRPCTimeout(conf.RpcTimeout*time.Second))
-  	opts = append(opts, client.WithSuite(tracing.NewClientSuite()))
-  	opts = append(opts, client.WithClientBasicInfo(&rpcinfo.EndpointBasicInfo{ServiceName: conf.ServiceName}))
+  opts := make([]client.Option, 0, 7)
+  opts = append(opts, client.WithHostPorts(conf.Addr))                                                       // 设置RPC客户端的地址
+  opts = append(opts, client.WithMuxConnection(conf.MuxConnectionNum))                                       // 设置RPC客户端的Mux连接数
+  opts = append(opts, client.WithRPCTimeout(conf.RpcTimeout*time.Second))                                    // 设置RPC客户端的超时时间
+  opts = append(opts, client.WithClientBasicInfo(&rpcinfo.EndpointBasicInfo{ServiceName: conf.ServiceName})) // 设置RPC客户端的基本信息
+  opts = append(opts, client.WithMetaHandler(transmeta.ClientTTHeaderHandler))
+  //code := thrift.NewThriftCodec()
+  code := thrift.NewThriftCodecWithConfig(thrift.FastRead | thrift.FastWrite | thrift.FrugalRead | thrift.FrugalWrite)
+  opts = append(opts, kClient.WithPayloadCodec(code))
+  framed := kClient.WithTransportProtocol(transport.TTHeaderFramed)
+  opts = append(opts, framed)
+  
   	rpcClient, err := {{ToLower .ServiceName}}.NewClient(conf.ServiceName, opts...)
   	if err != nil {
   		log.CtxErrorf(ctx, "%s 客户端连接失败 err：%s", conf.ServiceName, err)
