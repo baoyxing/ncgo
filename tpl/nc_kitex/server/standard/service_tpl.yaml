@@ -8,6 +8,8 @@ body: |-
      "{{.Module}}/internal/base/conf"
      "github.com/cloudwego/kitex/pkg/klog"
       "{{.ImportPath}}"
+     "github.com/baoyxing/micro-extend/pkg/errors/rpc"
+     "github.com/pkg/errors"
   )
   
   type Service struct {
@@ -15,9 +17,22 @@ body: |-
     conf *conf.Config
   }
   
+  type RequestArgument interface {
+  IsValid() error
+  }
+  
+  
   func NewService(c *conf.Config,log klog.CtxLogger)  .{{.ServiceName}} {
     return &Service{  
         log:log,
         conf:c,
     }
+  }
+  
+  func (s *Service) CheckArgument(argument RequestArgument) error {
+  	err := argument.IsValid()
+  	if err != nil {
+  		return rpc.NewBizStatusError(rpc.ErrorTypeDataInvalid, errors.Wrap(err, "invalid request"))
+  	}
+  	return nil
   }

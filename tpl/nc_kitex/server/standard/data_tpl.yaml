@@ -68,7 +68,7 @@ body: |-
   }
     _, err := client.Ping(ctx).Result()
     if err != nil {
-        log.CtxFatalf(ctx, "redis connect ping failed, err:", err.Error())
+        log.CtxFatalf(ctx, "redis connect ping failed, err:%s", err.Error())
       }
     return client
   }
