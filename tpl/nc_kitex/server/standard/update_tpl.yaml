@@ -1,0 +1,7 @@
+path: script/update.sh
+update_behavior:
+  type: skip
+body: |-
+  #!/usr/bin/env bash
+  cd ../
+  kitex --thrift-plugin validator -service {{.Namespace}}-rpc -module {{.Module}} idl/{{.Namespace}}.thrift

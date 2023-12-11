@@ -1,0 +1,12 @@
+path: polaris.yaml
+update_behavior:
+  type: skip
+body: |-
+  global:
+    serverConnector:
+      addresses:
+        - polaris.config.ncloud.com:8091
+  config:
+    configConnector:
+      addresses:
+        - polaris.config.ncloud.com:8093

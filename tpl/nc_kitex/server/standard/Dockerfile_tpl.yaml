@@ -1,0 +1,36 @@
+path: Dockerfile
+update_behavior:
+  type: skip
+body: |-
+  FROM golang:alpine AS builder
+  
+  LABEL stage=gobuilder
+  
+  ENV CGO_ENABLED 0
+  ENV GOPROXY https://goproxy.cn,direct
+  RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+  
+  RUN apk update --no-cache && apk add --no-cache tzdata
+  
+  WORKDIR /build
+  
+  ADD go.mod .
+  ADD go.sum .
+  RUN go mod download
+  COPY . .
+  RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /build/{{.Namespace}}/{{.Namespace}}RPC
+  COPY polaris.yaml /build/{{.Namespace}}/polaris.yaml
+  #COPY /conf/dev/conf.yaml /build/{{.Namespace}}/conf/dev/conf.yaml
+  
+  FROM scratch
+  
+  COPY --from=builder /usr/share/zoneinfo/Asia/Shanghai /usr/share/zoneinfo/Asia/Shanghai
+  ENV TZ Asia/Shanghai
+  
+  WORKDIR /app
+  COPY --from=builder /build/{{.Namespace}}/{{.Namespace}}RPC /app/{{.Namespace}}RPC
+  COPY --from=builder /build/{{.Namespace}}/polaris.yaml /app/polaris.yaml
+  #COPY --from=builder /build/{{.Namespace}}/conf/dev/conf.yaml /app/conf/dev/conf.yaml
+  
+  CMD ["./{{.Namespace}}RPC"]
+  

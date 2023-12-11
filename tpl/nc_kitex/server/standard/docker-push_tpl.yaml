@@ -1,0 +1,6 @@
+path: script/docker-push.sh
+update_behavior:
+  type: skip
+body: |-
+  #!/usr/bin/env bash
+  docker push uhub.service.ucloud.cn/{{.Module}}:"$1"

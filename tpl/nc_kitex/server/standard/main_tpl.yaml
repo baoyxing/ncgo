@@ -1,4 +1,4 @@
-path: cmd/main.go
+path: main.go
 update_behavior:
   type: skip
 body: |-

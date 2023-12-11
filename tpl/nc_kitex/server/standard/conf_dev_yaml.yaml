@@ -1,4 +1,4 @@
-path: cmd/conf/dev/conf.yaml
+path: conf/dev/conf.yaml
 update_behavior:
   type: skip
 body: |-

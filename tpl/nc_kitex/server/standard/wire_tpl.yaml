@@ -1,4 +1,4 @@
-path: cmd/wire.go
+path: wire.go
 update_behavior:
   type: skip
 body: |-

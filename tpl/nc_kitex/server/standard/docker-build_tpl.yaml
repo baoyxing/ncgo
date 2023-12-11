@@ -1,0 +1,7 @@
+path: script/docker-build.sh
+update_behavior:
+  type: skip
+body: |-
+  #!/usr/bin/env bash
+  cd ../
+  docker build -t uhub.service.ucloud.cn/{{.Module}}:"$1" .
