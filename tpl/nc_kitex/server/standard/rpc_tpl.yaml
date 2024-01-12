@@ -13,7 +13,7 @@ body: |-
      "github.com/cloudwego/kitex/server"
   )
   
-  func NewRPCServer(s .{{.ServiceName}},c *conf.Config,log klog.CtxLogger) server.Server {
+  func NewRPCServer(s {{.Namespace}}.{{.ServiceName}},c *conf.Config,log klog.CtxLogger) server.Server {
      	opts, _ := rpc.ServerOptions(c.Server, c.Service, log)
         return {{ToLower .ServiceName}}.NewServer(s, opts...)
   }

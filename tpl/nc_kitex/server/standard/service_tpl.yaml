@@ -22,7 +22,7 @@ body: |-
   }
   
   
-  func NewService(c *conf.Config,log klog.CtxLogger)  .{{.ServiceName}} {
+  func NewService(c *conf.Config,log klog.CtxLogger)  {{.Namespace}}.{{.ServiceName}} {
     return &Service{  
         log:log,
         conf:c,
