@@ -6,8 +6,8 @@ body: |-
   
   import (
       "context"
-      clientConf "github.com/baoyxing/micro-extend/pkg/config/client"
-      "github.com/baoyxing/micro-extend/pkg/options/rpc"
+      clientConf "gitee.com/byx_darwin/micro-extend/pkg/config/client"
+     "gitee.com/byx_darwin/micro-extend/pkg/options/rpc"
       "github.com/cloudwego/hertz/pkg/common/hlog"
       "github.com/kitex-contrib/polaris"
       "{{.ImportPath}}/{{ToLower .ServiceName}}"
@@ -33,7 +33,7 @@ body: |-
   log.CtxErrorf(ctx, "%s 客户端连接失败 err：%s", serverName, err)
   return nil, err
   }
-  log.CtxInfof(ctx, "%s 客户端连接成功 ", serverName)
+  log.CtxDebugf(ctx, "%s 客户端连接成功 ", serverName)
   return rpcClient, nil
   }
   
@@ -45,8 +45,7 @@ body: |-
   opts = append(opts, client.WithRPCTimeout(conf.RpcTimeout*time.Second))                                    // 设置RPC客户端的超时时间
   opts = append(opts, client.WithClientBasicInfo(&rpcinfo.EndpointBasicInfo{ServiceName: conf.ServiceName})) // 设置RPC客户端的基本信息
   opts = append(opts, client.WithMetaHandler(transmeta.ClientTTHeaderHandler))
-  //code := thrift.NewThriftCodec()
-  code := thrift.NewThriftCodecWithConfig(thrift.FastRead | thrift.FastWrite | thrift.FrugalRead | thrift.FrugalWrite)
+  code := thrift.NewThriftCodec()
   opts = append(opts, kClient.WithPayloadCodec(code))
   framed := kClient.WithTransportProtocol(transport.TTHeaderFramed)
   opts = append(opts, framed)
@@ -56,6 +55,6 @@ body: |-
   		log.CtxErrorf(ctx, "%s 客户端连接失败 err：%s", conf.ServiceName, err)
   		return nil, err
   	}
-  	log.CtxInfof(ctx, "%s 客户端连接成功 ", conf.ServiceName)
+  	log.CtxDebugf(ctx, "%s 客户端连接成功 ", conf.ServiceName)
   	return rpcClient, nil
   }

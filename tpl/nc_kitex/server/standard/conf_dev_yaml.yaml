@@ -6,6 +6,7 @@ body: |-
     space: ''
     name: ''
     version: v1.0.0
+    env: ''
   server:
     rpc:
       enable: true
@@ -15,7 +16,7 @@ body: |-
       enable: true
     jaeger:
       enable: true
-      endpoint: '36.139.116.223:4317'
+      endpoint: 'http://mT6XJEgsNqTs6N0GKmqOIStqlZKMGXpK@38.107.226.118:14318?grpc=14317'
     transport:
       enable: false
     limit:
@@ -27,7 +28,6 @@ body: |-
       level_base: false
       level_detailed: true
   logger:
-    enable: true
     path: ./log
     max_size: 10
     max_backups: 10
@@ -36,19 +36,24 @@ body: |-
     output_mode: 2
     suffix: ".log"
     rotation_duration: 0
-    level: debug
+    min_span_level: debug
+    error_span_level: error
+    record_stack: true
   db_option:
     driver: mysql
     source: yw:yw#123@tcp(192.168.0.10:3306)/ncloud_job?charset=utf8mb4&parseTime=True&loc=Local
-    sql_log: true
-    max_open_conns: 2
-    max_idle_conns: 1
+    max_open_conns: 20
+    max_idle_conns: 10
     conn_max_lifetime: 3600
+    max_idle_time: 3
   elastic_option:
     max_scroll_size: 10000
     keep_alive: 3
   elastic_client_option:
-    url: http://*.*.*.*:9200
+    url:
+      - "http://38.68.134.48:9200"
+      - "http://38.68.134.107:9200"
+      - "http://38.68.134.146:9200"
   redis_option:
     db: 6
     addr: *.*.*.*:6379

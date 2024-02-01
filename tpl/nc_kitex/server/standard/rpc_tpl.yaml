@@ -5,7 +5,7 @@ body: |-
   package server
   
    import (
-     "github.com/baoyxing/micro-extend/pkg/options/rpc"
+     "gitee.com/byx_darwin/micro-extend/pkg/options/rpc"
      "github.com/cloudwego/kitex/pkg/klog"
      "{{.Module}}/internal/base/conf"
      "{{.ImportPath}}/{{ToLower .ServiceName}}"

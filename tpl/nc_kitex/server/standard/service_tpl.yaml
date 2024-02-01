@@ -8,7 +8,7 @@ body: |-
      "{{.Module}}/internal/base/conf"
      "github.com/cloudwego/kitex/pkg/klog"
       "{{.ImportPath}}"
-     "github.com/baoyxing/micro-extend/pkg/errors/rpc"
+     "gitee.com/byx_darwin/micro-extend/pkg/errors/rpc"
      "github.com/pkg/errors"
   )
   

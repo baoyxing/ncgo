@@ -107,10 +107,10 @@ layouts:
         "context"
       
         "flag"
-        "github.com/baoyxing/micro-extend/pkg/configuration/polaris"
-        "github.com/baoyxing/micro-extend/pkg/utils/logutils"
+        "gitee.com/byx_darwin/micro-extend/pkg/configuration/polaris"
+        "gitee.com/byx_darwin/uptrace-opentelemetry/log"
+        "gitee.com/byx_darwin/uptrace-opentelemetry/otelplay"
         "github.com/cloudwego/hertz/pkg/common/hlog"
-        hertzzap "github.com/hertz-contrib/logger/zap"
         "gopkg.in/yaml.v3"
         "{{.GoModule}}/internal/base/conf"
         "time"
@@ -123,8 +123,7 @@ layouts:
       )
       func main() {
         flag.Parse()
-        hlog.SetLogger(hertzzap.NewLogger())
-        hlog.SetLevel(hlog.LevelTrace)
+        ctx := context.Background()
         //解析远程配置文件
         config := new(conf.Config)
         if conf.GetEnv() == "dev" {
@@ -135,35 +134,30 @@ layouts:
           configFile := polaris.ConfigApi(namespace, fileGroup, fileName)
            err := yaml.Unmarshal([]byte(configFile.GetContent()), &config)
            if err != nil {
-              ctx := context.Background()
                hlog.CtxFatalf(ctx, "配置文件 yaml反序列化失败 error：%v", err)
             }
         }
   
         // 自定义日志配置
-        if config.Logger.Enable {
-           opts := make([]logutils.Option, 0, 8)
-           opts = append(opts, logutils.WithPath(config.Logger.Path))
-           opts = append(opts, logutils.WithMaxSize(config.Logger.MaxSize))
-           opts = append(opts, logutils.WithMaxBackups(config.Logger.MaxBackups))
-           opts = append(opts, logutils.WithMaxAge(config.Logger.MaxAge))
-          opts = append(opts, logutils.WithCompress(config.Logger.Compress))
-          opts = append(opts, logutils.WithOutputMode(config.Logger.OutputMode))
-          opts = append(opts, logutils.WithRotationDuration(time.Duration(config.Logger.RotationDuration)))
-          opts = append(opts, logutils.WithSuffix(config.Logger.Suffix))
-          logutils.NewHertzLog(opts...)
-          hlog.SetLevel(logutils.Level(config.Logger.Level).HLogLevel())
-        }
-  
-      //wire 依赖注入
-      h, cleanup, err := initApp(hlog.DefaultLogger(), config)
+      if config.Server.Jaeger.Enable {
+        shutdown := otelplay.ConfigureOpentelemetry(ctx, &otelplay.Config{
+        ServiceDSN:     config.Server.Jaeger.Endpoint,
+        ServiceName:    config.Service.Name,
+        ServiceVersion: config.Service.Version,
+        Environment:    config.Service.Env,
+        })
+       defer shutdown()
+      }
+      
+        log.NewHertzLog(config.Logger)
+       // wire 依赖注入
+        h, cleanup, err := initApp(hlog.DefaultLogger(), config)
       if err != nil {
-        panic(err)
+      hlog.CtxFatalf(ctx, "初始化失败 error：%v", err)
       }
-
-      defer cleanup()
-      h.Spin()
-      }
+  
+        defer cleanup()
+       h.Spin()
   
 
   - path: biz/router/register.go
@@ -193,9 +187,9 @@ layouts:
 
       import (
         "context"
-      	"github.com/baoyxing/micro-extend/pkg/config/client"
-      	"github.com/baoyxing/micro-extend/pkg/config/hertz_conf"
-      	"github.com/baoyxing/micro-extend/pkg/config/log"
+      	"gitee.com/byx_darwin/micro-extend/pkg/config/client"
+      	"gitee.com/byx_darwin/micro-extend/pkg/config/hertz_conf"
+      	"gitee.com/byx_darwin/uptrace-opentelemetry/log"
         "github.com/bytedance/go-tagexpr/v2/validator"
         "github.com/cloudwego/hertz/pkg/common/hlog"
         "gopkg.in/yaml.v3"
@@ -213,11 +207,11 @@ layouts:
       	Service       hertz_conf.Service `json:"service" yaml:"service"`        //服务名称配置
       	ClientConnect ClientConnect      `json:"client_connect" yaml:"client_connect"` //客户端服务发现配置
       	Server        hertz_conf.Server  `json:"server"  yaml:"server"`         //服务端配置
-      	Logger        log.Logger         `json:"logger" yaml:"logger"`         //日志配置
+      	Logger        log.Config         `json:"logger" yaml:"logger"`         //日志配置
       }
       type ClientConnect struct {
         Option         client.Client          `json:"option" yaml:"option"`
-        GeoInfoService client.RPCServerOption `json:"Geo_info_service" yaml:"Geo_info_service"`
+        GeoInfoService client.RPCServerOption `json:"Geo_service" yaml:"Geo_service"`
       }
       // GetConf gets configuration instance
       func GetConf() *Config {
@@ -433,10 +427,10 @@ layouts:
       package data
       import (
         "context"
-        geoRPCClient "github.com/baoyxing/geo-rpc/client"
-        "github.com/baoyxing/geo-rpc/kitex_gen/geo/geoservice"
-        "github.com/baoyxing/micro-extend/pkg/config/client"
-        mPolaris "github.com/baoyxing/micro-extend/pkg/polaris"
+        geoRPCClient "gitee.com/byx_darwin/geo-rpc/client"
+        "gitee.com/byx_darwin/geo-rpc/kitex_gen/geo/geoservice"
+        "gitee.com/byx_darwin/micro-extend/pkg/config/client"
+        mPolaris "gitee.com/byx_darwin/micro-extend/pkg/polaris"
         "github.com/cloudwego/hertz/pkg/common/hlog"
         "github.com/kitex-contrib/polaris"
         "{{.GoModule}}/internal/base/conf"
@@ -673,28 +667,26 @@ layouts:
       
       import (
         "context"
-        "github.com/baoyxing/micro-extend/middleware"
-        "github.com/baoyxing/micro-extend/pkg/options/http"
+        "gitee.com/byx_darwin/micro-extend/middleware"
+        "gitee.com/byx_darwin/micro-extend/pkg/options/http"
         "github.com/cloudwego/hertz/pkg/app/middlewares/server/recovery"
         httpServer "github.com/cloudwego/hertz/pkg/app/server"
         "github.com/cloudwego/hertz/pkg/common/hlog"
         hgzip "github.com/hertz-contrib/gzip"
-        hertztracing "github.com/hertz-contrib/obs-opentelemetry/tracing"
+        "gitee.com/byx_darwin/uptrace-opentelemetry/cloudwego/hertz/otelhertz"
         "{{.GoModule}}/internal/base/conf"
         "{{.GoModule}}/internal/router"
       )
       
       func NewHTTPServer(r *router.Router, c *conf.Config, log hlog.CtxLogger) *httpServer.Hertz {
   
-        //初始化链路
-        tracer, config := http.NewServerTracer(c.Server, c.Service, log)
+       //初始化链路
+        tracer, cfg := otelhertz.NewServerTracer()
         // 创建实例
-        hertz := httpServer.New(http.ServerOptions(c.Server, c.Service, log, tracer)...)
-        hertz.Use(hertztracing.ServerMiddleware(config))
-  
+          hertz := httpServer.New(http.ServerOptions(c.Server, c.Service, log, tracer)...)
         //是否启用jaeger链路追踪
         if c.Server.Jaeger.Enable {
-          hertz.Use(hertztracing.ServerMiddleware(config))
+          hertz.Use(otelhertz.ServerMiddleware(cfg))
         }
   
         // 跨域
@@ -787,7 +779,7 @@ layouts:
       
       import (
         "crypto/sha1"
-        microMiddleware "github.com/baoyxing/micro-extend/middleware"
+        microMiddleware "gitee.com/byx_darwin/micro-extend/middleware"
         "{{.GoModule}}/internal/service"
         "github.com/cloudwego/hertz/pkg/app/server"
       )
@@ -910,8 +902,10 @@ layouts:
       
       require (
         github.com/apache/thrift v0.16.0
-        github.com/baoyxing/geo-rpc v0.0.0-20231115130557-d9ed4fbb1841
-        github.com/baoyxing/micro-extend v0.0.0-20231123114354-f95d5ae3aa82
+        gitee.com/byx_darwin/geo-rpc v0.0.0-20240201064837-022324c0c4aa
+        gitee.com/byx_darwin/uptrace-opentelemetry/cloudwego/hertz/otelhertz v0.0.0-20240129130301-95eac5ab2876
+        gitee.com/byx_darwin/uptrace-opentelemetry/log v0.0.0-20240129130301-95eac5ab2876
+        gitee.com/byx_darwin/uptrace-opentelemetry/otelplay v0.0.0-20240129130301-95eac5ab2876
         github.com/bytedance/go-tagexpr/v2 v2.9.11
         github.com/cloudwego/hertz v0.7.2
         github.com/google/wire v0.5.0

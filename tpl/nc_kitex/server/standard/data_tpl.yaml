@@ -10,9 +10,11 @@ body: |-
      "github.com/cloudwego/kitex/pkg/klog"
      "github.com/redis/go-redis/v9"
      "github.com/olivere/elastic/v7"
-     "github.com/baoyxing/micro-extend/pkg/kafka/sarama"
+     "gitee.com/byx_darwin/micro-extend/pkg/kafka/sarama"
      "github.com/uptrace/opentelemetry-go-extra/otelsql"
      "github.com/redis/go-redis/extra/redisotel/v9"
+  "time"
+  )
     
      
   )
@@ -52,9 +54,13 @@ body: |-
   
   func newRedisClient(ctx context.Context,conf *conf.Config, log klog.CtxLogger) *redis.Client {
     client := redis.NewClient(&redis.Options{
-      Addr:     conf.RedisOption.Addr,
-      Password: conf.RedisOption.Password,
-      DB:       int(conf.RedisOption.DB),
+      Addr:         conf.RedisOption.Adders[0],
+      DialTimeout:  time.Duration(conf.RedisOption.DialTimeout) * time.Second,  // 设置连接超时
+      ReadTimeout:  time.Duration(conf.RedisOption.ReadTimeout) * time.Second,  // 设置读取超时
+      WriteTimeout: time.Duration(conf.RedisOption.WriteTimeout) * time.Second, // 设置写入超时
+      MaxRetries:   int(conf.RedisOption.MaxRetries),
+      Password:     conf.RedisOption.Password,
+      DB:           int(conf.RedisOption.DB),
     })
   if conf.Server.Jaeger.Enable {
   // 开启 tracing instrumentation.
@@ -76,7 +82,7 @@ body: |-
   func newESClient(ctx context.Context,conf *conf.Config,
     log klog.CtxLogger) *elastic.Client {
       client, err := elastic.NewClient(
-      elastic.SetURL(conf.ElasticClientOption.URL),
+      elastic.SetURL(conf.ElasticClientOption.URL...),
       elastic.SetSniff(false))
       if err != nil {
         log.CtxFatalf(ctx, "elastic Dial failure,err:%v", err)
